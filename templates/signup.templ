@@ -1,0 +1,25 @@
+package templates
+
+templ Signup(errorMsg, userName string) {
+	@Layout("signup") {
+		<form method="post" class={ "spaced", "p2", loginForm() }>
+			<h1>Sign up</h1>
+			<div>
+				<label for="userName">
+					Username
+				</label>
+				<input type="text" name="userName" id="userName" value={ userName } autofocus/>
+			</div>
+			<div>
+				<label for="password">
+					Password
+				</label>
+				<input type="password" name="password" id="password"/>
+			</div>
+			if errorMsg != "" {
+				<div class="alert p1">{ errorMsg }</div>
+			}
+			<button type="submit">Sign up</button>
+		</form>
+	}
+}

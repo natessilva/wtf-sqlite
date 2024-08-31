@@ -1,0 +1,33 @@
+package templates
+
+css loginForm() {
+	width: 285px;
+	margin: 0 auto;
+}
+
+templ Login(errorMsg, userName string) {
+	@Layout("login") {
+		<form method="post" class={ "p2", "spaced", loginForm() }>
+			<h1>Log in</h1>
+			<div>
+				<label for="userName">
+					Username
+				</label>
+				<input type="text" name="userName" id="userName" value={ userName } autofocus/>
+			</div>
+			<div>
+				<label for="password">
+					Password
+				</label>
+				<input type="password" name="password" id="password"/>
+			</div>
+			if errorMsg != "" {
+				<div class="alert p2">{ errorMsg }</div>
+			}
+			<button type="submit">Login</button>
+			<div>
+				Not already a member? <a href="/signup">Sign up!</a>
+			</div>
+		</form>
+	}
+}

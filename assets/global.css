@@ -1,0 +1,118 @@
+html {
+  box-sizing: border-box;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ol,
+ul {
+  margin: 0;
+  padding: 0;
+  font-weight: normal;
+}
+
+ol,
+ul {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+input,
+select,
+textarea {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #ccc;
+  line-height: 1;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+/* Input focus effect */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #007bff; /* Change to your desired focus color */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Subtle glow */
+  outline: none;
+}
+
+/* Hover effect */
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #888; /* Slight change in border on hover */
+}
+
+/* Disabled state */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #f0f0f0;
+  color: #888;
+  border-color: #e0e0e0;
+}
+
+/* Placeholder style */
+::placeholder {
+  color: #aaa;
+  font-style: italic;
+}
+
+/* Style for buttons */
+button {
+  background-color: #007bff;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+button:disabled {
+  background-color: #ddd;
+  cursor: not-allowed;
+}
+
+.spaced {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.p1 {
+  padding: 0.5rem;
+}
+
+.p2 {
+  padding: 0.75rem;
+}
+
+.alert {
+  background-color: rgb(254, 242, 242);
+}

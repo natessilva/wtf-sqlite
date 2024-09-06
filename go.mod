@@ -9,3 +9,5 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/crypto v0.26.0
 )
+
+require github.com/gofrs/uuid v4.4.0+incompatible

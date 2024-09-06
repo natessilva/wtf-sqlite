@@ -3,7 +3,6 @@ package sqlite
 import (
 	"net/http"
 	"sqlite/templates"
-	"strconv"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -12,53 +11,59 @@ import (
 type Handler struct {
 	http.Handler
 	AuthService *AuthService
+	UserService *UserService
 }
 
-func NewHandler(authService *AuthService) *Handler {
+func NewHandler(authService *AuthService, userService *UserService) *Handler {
 	mux := http.NewServeMux()
 	h := &Handler{
 		Handler:     mux,
 		AuthService: authService,
+		UserService: userService,
 	}
 
 	router := httprouter.New()
 
-	// explicitly require that these routes
-	// do not have an authenticated user
-	// using a middleware called noAuth
-	// it will redirect to "/" if there is
-	// an authenticated user already.
-	router.GET("/login", h.handleGetLogin)
-	router.POST("/login", h.handlePostLogin)
-	router.GET("/signup", h.handleGetSignup)
-	router.POST("/signup", h.handlePostSignup)
-	router.GET("/logout", h.handleLogout)
+	// if you are already authenticated, none of these routes make
+	// sense
+	router.GET("/login", requireNoAuth(h.handleGetLogin))
+	router.POST("/login", requireNoAuth(h.handlePostLogin))
+	router.GET("/signup", requireNoAuth(h.handleGetSignup))
+	router.POST("/signup", requireNoAuth(h.handlePostSignup))
 
-	// require every other route to be authenticated
-	// via a middleware called auth. it will 401
-	// and redirect to login
+	// these routes are public.
+	router.GET("/logout", h.handleLogout)
 	router.GET("/", h.handleIndex)
 
-	// assume I already have the middlewares implemented
-
-	mux.Handle("/", router)
+	mux.Handle("/", authService.Middleware(router))
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 
 	return h
 }
 
+func requireNoAuth(handle httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+		userId := UserFromFromContext(r.Context())
+		if userId != 0 {
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
+		handle(w, r, p)
+	}
+}
+
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	cookie, err := r.Cookie("userID")
-	if err != nil {
+	userId := UserFromFromContext(r.Context())
+	if userId == 0 {
 		templates.Index("World").Render(r.Context(), w)
 		return
 	}
-	// userID, err := strconv.ParseInt(cookie.Value, 10, 64)
+	user, err := h.UserService.Get(r.Context())
 	if err != nil {
 		handleError(w, err)
 		return
 	}
-	templates.Index(cookie.Value).Render(r.Context(), w)
+	templates.Index(user.UserName).Render(r.Context(), w)
 }
 
 func (h *Handler) handleGetLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -87,8 +92,8 @@ func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p http
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     "userID",
-		Value:    strconv.FormatInt(output.UserID, 10),
+		Name:     "token",
+		Value:    output.Token,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -126,8 +131,8 @@ func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p htt
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     "userID",
-		Value:    strconv.FormatInt(output.UserID, 10),
+		Name:     "token",
+		Value:    output.Token,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -135,7 +140,7 @@ func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p htt
 }
 
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	cookie, err := r.Cookie("userID")
+	cookie, err := r.Cookie("token")
 	if err == nil {
 		// clear and expire the cookie
 		cookie.Value = ""

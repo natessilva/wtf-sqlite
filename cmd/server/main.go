@@ -22,10 +22,11 @@ func run() error {
 
 	// todo application server
 	authService := sqlite.NewAuthService(db)
+	userService := sqlite.NewUserService(db)
 
 	server := &http.Server{
 		Addr:    ":8000",
-		Handler: sqlite.NewHandler(authService),
+		Handler: sqlite.NewHandler(authService, userService),
 	}
 
 	go log.Fatal(server.ListenAndServe())

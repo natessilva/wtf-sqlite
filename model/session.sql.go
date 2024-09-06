@@ -25,6 +25,15 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 	return err
 }
 
+const deleteSession = `-- name: DeleteSession :exec
+delete from session where id = ?
+`
+
+func (q *Queries) DeleteSession(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteSession, id)
+	return err
+}
+
 const getSession = `-- name: GetSession :one
 select user_id, datetime(created_at, '+' || ttl || ' days') < current_timestamp as expired from session where id = ?
 `

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 func run() error {
@@ -24,13 +26,36 @@ func run() error {
 	authService := sqlite.NewAuthService(db)
 	userService := sqlite.NewUserService(db)
 	dialService := sqlite.NewDialService(db)
+	var server *http.Server
 
-	server := &http.Server{
-		Addr:    ":8000",
-		Handler: sqlite.NewHandler(authService, userService, dialService),
+	if true {
+		certManager := autocert.Manager{
+			Cache:      autocert.DirCache("certs"),            // Folder to store certs
+			Prompt:     autocert.AcceptTOS,                    // Automatically accept Let's Encrypt's TOS
+			HostPolicy: autocert.HostWhitelist("silva.world"), // Replace with your domain
+		}
+
+		// Create an HTTPS server using autocert
+		server = &http.Server{
+			Addr: ":443",
+			TLSConfig: &tls.Config{
+				GetCertificate: certManager.GetCertificate,
+			},
+			Handler: sqlite.NewHandler(authService, userService, dialService),
+		}
+		go http.ListenAndServe(":80", certManager.HTTPHandler(nil))
+
+		// Start the HTTPS server
+		go log.Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+
+		server = &http.Server{
+			Addr:    ":8000",
+			Handler: sqlite.NewHandler(authService, userService, dialService),
+		}
+
+		go log.Fatal(server.ListenAndServe())
 	}
-
-	go log.Fatal(server.ListenAndServe())
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

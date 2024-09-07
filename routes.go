@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 )
+
+//go:embed assets/*
+var assetsFS embed.FS
 
 type Handler struct {
 	http.Handler
@@ -51,7 +55,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	router.PATCH("/dials/:id", requireAuth(h.handlePatchDial))
 
 	mux.Handle("/", authService.Middleware(router))
-	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+	mux.Handle("/assets/", http.FileServer(http.FS(assetsFS)))
 
 	return h
 }

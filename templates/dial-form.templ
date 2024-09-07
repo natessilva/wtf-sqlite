@@ -1,0 +1,29 @@
+package templates
+
+func DialFormTitle(name string) string {
+	if name == "" {
+		return "New dial"
+	}
+	return "Edit dial"
+}
+
+templ DialForm(name string) {
+	@Layout(DialFormTitle(name), true) {
+		<form method="post" class="p2 spaced">
+			if name == "" {
+				<h1>New Dial</h1>
+			} else {
+				<h1>Edit Dial</h1>
+			}
+			<div>
+				<label for="name">Name</label>
+				<input type="text" name="name" id="name" value={ name } autofocus/>
+			</div>
+			if name == "" {
+				<button type="submit">Create</button>
+			} else {
+				<button type="submit">Save</button>
+			}
+		</form>
+	}
+}

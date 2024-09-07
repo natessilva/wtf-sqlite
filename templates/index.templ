@@ -1,12 +1,8 @@
 package templates
 
 templ Index(name string) {
-	@Layout("Welcome") {
+	@Layout("Welcome", true) {
 		<h1>Hello, { name }</h1>
-		if name != "World" {
-			<a href="/logout">Logout</a>
-		} else {
-			<a href="/login">Login</a>
-		}
+		<p>Idk I guess maybe a dashboard goes here?</p>
 	}
 }

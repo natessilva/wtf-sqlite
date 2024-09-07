@@ -139,7 +139,14 @@ func (svc *AuthService) Middleware(handle http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie("token"); err == nil {
 			if userId, err := svc.GetUserFromSession(r.Context(), cookie.Value); err == nil {
+				// if we got a user, put it in the request context
 				r = RequestWithUser(r, userId)
+
+			} else if err != sql.ErrNoRows {
+				// ErrNoRows just means that there isn't a session
+				// any other error means something unexpected happened
+				handleError(w, err)
+				return
 			}
 		}
 		handle.ServeHTTP(w, r)

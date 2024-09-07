@@ -6,7 +6,7 @@ css loginForm() {
 }
 
 templ Login(errorMsg, userName string) {
-	@Layout("login") {
+	@Layout("login", false) {
 		<form method="post" class={ "p2", "spaced", loginForm() }>
 			<h1>Log in</h1>
 			<div>

@@ -1,0 +1,25 @@
+package templates
+
+import (
+	"sqlite/model"
+	"fmt"
+	"strconv"
+)
+
+templ Dials(dials []model.Dial) {
+	@Layout("Dials", true) {
+		<h1>Dials</h1>
+		<a href="/newDial">Create New</a>
+		<ul>
+			for _,dial :=  range dials {
+				<li>
+					<div>
+						<span>{ dial.Name } </span>
+						<span>Value: { strconv.FormatInt(dial.Value,10) }</span>
+						<a href={ templ.URL(fmt.Sprintf("/dials/%d", dial.ID)) }>View</a>
+					</div>
+				</li>
+			}
+		</ul>
+	}
+}

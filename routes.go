@@ -21,15 +21,17 @@ type Handler struct {
 	AuthService *AuthService
 	UserService *UserService
 	DialService *DialService
+	UseTLS      bool
 }
 
-func NewHandler(authService *AuthService, userService *UserService, dialService *DialService) *Handler {
+func NewHandler(authService *AuthService, userService *UserService, dialService *DialService, useTLS bool) *Handler {
 	mux := http.NewServeMux()
 	h := &Handler{
 		Handler:     mux,
 		AuthService: authService,
 		UserService: userService,
 		DialService: dialService,
+		UseTLS:      useTLS,
 	}
 
 	router := httprouter.New()
@@ -126,6 +128,8 @@ func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p http
 		Value:    output.Token,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Now().AddDate(0, 0, 30),
+		Secure:   h.UseTLS,
 	})
 	http.Redirect(w, r, "/", http.StatusFound)
 }
@@ -165,6 +169,8 @@ func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p htt
 		Value:    output.Token,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Now().AddDate(0, 0, 30),
+		Secure:   h.UseTLS,
 	})
 	http.Redirect(w, r, "/", http.StatusFound)
 }

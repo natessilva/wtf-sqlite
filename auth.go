@@ -102,15 +102,14 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 	}, nil
 }
 
-type Session struct {
-	UserID  int64
-	Expired bool
-}
-
 func (svc *AuthService) GetUserFromSession(ctx context.Context, token string) (int64, error) {
 	session, err := svc.db.Queries.GetSession(ctx, token)
 	if err != nil {
 		return 0, err
+	}
+	if session.Expired {
+		svc.db.Queries.DeleteSession(ctx, token)
+		return 0, nil
 	}
 	return session.UserID, nil
 }
@@ -118,10 +117,6 @@ func (svc *AuthService) GetUserFromSession(ctx context.Context, token string) (i
 type contextKey struct{}
 
 var key contextKey
-
-type User struct {
-	ID int64
-}
 
 func RequestWithUser(r *http.Request, i int64) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), &key, i))
@@ -138,7 +133,7 @@ func UserFromFromContext(ctx context.Context) int64 {
 func (svc *AuthService) Middleware(handle http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie("token"); err == nil {
-			if userId, err := svc.GetUserFromSession(r.Context(), cookie.Value); err == nil {
+			if userId, err := svc.GetUserFromSession(r.Context(), cookie.Value); err == nil && userId != 0 {
 				// if we got a user, put it in the request context
 				r = RequestWithUser(r, userId)
 

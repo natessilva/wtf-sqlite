@@ -28,7 +28,9 @@ func run() error {
 	dialService := sqlite.NewDialService(db)
 	var server *http.Server
 
-	if true {
+	env := os.Getenv("ENV")
+
+	if env == "prod" {
 		certManager := autocert.Manager{
 			Cache:      autocert.DirCache("certs"),            // Folder to store certs
 			Prompt:     autocert.AcceptTOS,                    // Automatically accept Let's Encrypt's TOS
@@ -41,7 +43,7 @@ func run() error {
 			TLSConfig: &tls.Config{
 				GetCertificate: certManager.GetCertificate,
 			},
-			Handler: sqlite.NewHandler(authService, userService, dialService),
+			Handler: sqlite.NewHandler(authService, userService, dialService, true),
 		}
 		go http.ListenAndServe(":80", certManager.HTTPHandler(nil))
 
@@ -51,7 +53,7 @@ func run() error {
 
 		server = &http.Server{
 			Addr:    ":8000",
-			Handler: sqlite.NewHandler(authService, userService, dialService),
+			Handler: sqlite.NewHandler(authService, userService, dialService, false),
 		}
 
 		go log.Fatal(server.ListenAndServe())

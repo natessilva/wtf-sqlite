@@ -4,34 +4,30 @@ import "sqlite/model"
 import "strconv"
 import "fmt"
 
-var dialHandle = templ.NewOnceHandle()
-
 templ Dial(d model.Dial) {
-	@dialHandle.Once() {
-		<script type="text/javascript">
-		window.addEventListener('DOMContentLoaded', (event) => {
-			let timer;
-			const valueEl = document.getElementById("value");
-			const id = valueEl.getAttribute('data-id');
-			valueEl.addEventListener('input', (e)=>{
-				if(timer!=null){
-					clearTimeout(timer);
-				}
-				timer = setTimeout(()=>{
-					fetch('/dials/' + id, {
-						method: "PATCH",
-						body: JSON.stringify({value: +valueEl.value}),
-					});
-				},50);
-			});
-		});
-		</script>
-	}
 	@Layout("Dials", true) {
 		<h1>Dials</h1>
 		<a href={ templ.URL(fmt.Sprintf("/dials/%d/edit", d.ID)) }>Edit</a>
 		<a href={ templ.URL(fmt.Sprintf("/dials/%d/delete", d.ID)) }>Delete</a>
 		<div>{ d.Name }</div>
 		<input type="range" name="value" id="value" value={ strconv.FormatInt(d.Value, 10) } data-id={ strconv.FormatInt(d.ID, 10) }/>
+		<script type="text/javascript">
+			window.addEventListener('DOMContentLoaded', (event) => {
+				let timer;
+				const valueEl = document.getElementById("value");
+				const id = valueEl.getAttribute('data-id');
+				valueEl.addEventListener('input', (e)=>{
+					if(timer!=null){
+						clearTimeout(timer);
+					}
+					timer = setTimeout(()=>{
+						fetch('/dials/' + id, {
+							method: "PATCH",
+							body: JSON.stringify({value: +valueEl.value}),
+						});
+					},50);
+				});
+			});
+		</script>
 	}
 }

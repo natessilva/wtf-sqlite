@@ -11,6 +11,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -22,7 +23,6 @@ func run() error {
 	}
 	defer db.Close()
 
-	// todo application server
 	authService := sqlite.NewAuthService(db)
 	userService := sqlite.NewUserService(db)
 	dialService := sqlite.NewDialService(db)
@@ -32,12 +32,11 @@ func run() error {
 
 	if env == "prod" {
 		certManager := autocert.Manager{
-			Cache:      autocert.DirCache("certs"),            // Folder to store certs
-			Prompt:     autocert.AcceptTOS,                    // Automatically accept Let's Encrypt's TOS
-			HostPolicy: autocert.HostWhitelist("silva.world"), // Replace with your domain
+			Cache:      autocert.DirCache("certs"),
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist("silva.world"),
 		}
 
-		// Create an HTTPS server using autocert
 		server = &http.Server{
 			Addr: ":443",
 			TLSConfig: &tls.Config{
@@ -45,10 +44,8 @@ func run() error {
 			},
 			Handler: sqlite.NewHandler(authService, userService, dialService, true),
 		}
-		go http.ListenAndServe(":80", certManager.HTTPHandler(nil))
-
-		// Start the HTTPS server
-		go log.Fatal(server.ListenAndServeTLS("", ""))
+		go func() { http.ListenAndServe(":80", certManager.HTTPHandler(nil)) }()
+		go func() { log.Fatal(server.ListenAndServeTLS("", "")) }()
 	} else {
 
 		server = &http.Server{
@@ -56,8 +53,12 @@ func run() error {
 			Handler: sqlite.NewHandler(authService, userService, dialService, false),
 		}
 
-		go log.Fatal(server.ListenAndServe())
+		go func() { log.Fatal(server.ListenAndServe()) }()
 	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	go func() { log.Fatal(http.ListenAndServe(":6060", mux)) }()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

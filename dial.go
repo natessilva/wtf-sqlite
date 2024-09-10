@@ -16,15 +16,10 @@ func NewDialService(db *DB) *DialService {
 }
 
 func (svc *DialService) Create(ctx context.Context, name string) (int64, error) {
-	userID := UserFromFromContext(ctx)
-	id, err := svc.db.CreateDial(ctx, model.CreateDialParams{
-		UserID: userID,
+	return svc.db.CreateDial(ctx, model.CreateDialParams{
+		UserID: UserFromFromContext(ctx),
 		Name:   name,
 	})
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
 }
 
 func (svc *DialService) List(ctx context.Context) ([]model.Dial, error) {
@@ -32,9 +27,8 @@ func (svc *DialService) List(ctx context.Context) ([]model.Dial, error) {
 }
 
 func (svc *DialService) Get(ctx context.Context, id int64) (model.Dial, error) {
-	userID := UserFromFromContext(ctx)
 	return svc.db.GetDial(ctx, model.GetDialParams{
-		UserID: userID,
+		UserID: UserFromFromContext(ctx),
 		ID:     id,
 	})
 }

@@ -17,17 +17,15 @@ import (
 var assetsFS embed.FS
 
 type Handler struct {
-	http.Handler
 	AuthService *AuthService
 	UserService *UserService
 	DialService *DialService
 	UseTLS      bool
 }
 
-func NewHandler(authService *AuthService, userService *UserService, dialService *DialService, useTLS bool) *Handler {
+func NewHandler(authService *AuthService, userService *UserService, dialService *DialService, useTLS bool) http.Handler {
 	mux := http.NewServeMux()
 	h := &Handler{
-		Handler:     mux,
 		AuthService: authService,
 		UserService: userService,
 		DialService: dialService,
@@ -59,7 +57,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	mux.Handle("/", authService.Middleware(router))
 	mux.Handle("/assets/", http.FileServer(http.FS(assetsFS)))
 
-	return h
+	return instrumentedHandler(mux)
 }
 
 func requireNoAuth(handle httprouter.Handle) httprouter.Handle {

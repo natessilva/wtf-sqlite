@@ -10,7 +10,6 @@ import (
 	"sqlite"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -46,6 +45,7 @@ func run() error {
 		}
 		go func() { http.ListenAndServe(":80", certManager.HTTPHandler(nil)) }()
 		go func() { log.Fatal(server.ListenAndServeTLS("", "")) }()
+		log.Println("server running on ports 80 and 443")
 	} else {
 
 		server = &http.Server{
@@ -54,6 +54,7 @@ func run() error {
 		}
 
 		go func() { log.Fatal(server.ListenAndServe()) }()
+		log.Println("server running on port 8000")
 	}
 
 	mux := http.NewServeMux()

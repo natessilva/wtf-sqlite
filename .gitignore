@@ -2,3 +2,6 @@
 db/*.db*
 model/*
 templates/*.go
+server
+.sqlc_generated
+.templ_generated

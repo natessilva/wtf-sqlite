@@ -53,6 +53,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	router.GET("/dials/:id/edit", requireAuth(h.handleGetEditDial))
 	router.POST("/dials/:id/edit", requireAuth(h.handlePostEditDial))
 	router.PATCH("/dials/:id", requireAuth(h.handlePatchDial))
+	router.DELETE("/dials/:id", requireAuth(h.handleDeleteDial))
 
 	mux.Handle("/", authService.Middleware(router))
 	mux.Handle("/assets/", http.FileServer(http.FS(assetsFS)))
@@ -305,6 +306,21 @@ func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p http
 			templates.NotFound(true).Render(r.Context(), w)
 			return
 		}
+		handleError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) handleDeleteDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	err = h.DialService.Delete(r.Context(), id)
+	if err != nil {
 		handleError(w, err)
 		return
 	}

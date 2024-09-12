@@ -7,8 +7,8 @@ import "fmt"
 templ Dial(d model.Dial) {
 	@Layout("Dials", true) {
 		<h1>Dials</h1>
-		<a href={ templ.URL(fmt.Sprintf("/dials/%d/edit", d.ID)) }>Edit</a>
-		<a href={ templ.URL(fmt.Sprintf("/dials/%d/delete", d.ID)) }>Delete</a>
+		<a class="btn" href={ templ.URL(fmt.Sprintf("/dials/%d/edit", d.ID)) }>Edit</a>
+		<button id="deleteBtn" type="button">Delete</button>
 		<div>{ d.Name }</div>
 		<input type="range" name="value" id="value" value={ strconv.FormatInt(d.Value, 10) } data-id={ strconv.FormatInt(d.ID, 10) }/>
 		<script type="text/javascript">
@@ -27,6 +27,20 @@ templ Dial(d model.Dial) {
 						});
 					},50);
 				});
+
+				const deleteBtn = document.getElementById("deleteBtn");
+				deleteBtn.addEventListener('click', ()=>{
+					if(!confirm("Are you sure?")){
+						return
+					}
+					fetch('/dials/' + id, {
+						method: "DELETE",
+					}).then(response=>{
+						if(response.status < 400){
+							window.location.pathname = '/dials'
+						}
+					});
+				})
 			});
 		</script>
 	}

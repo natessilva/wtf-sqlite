@@ -8,14 +8,16 @@ import (
 	"io/fs"
 	"sort"
 	"sqlite/model"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 //go:embed db/migrations/*.sql
 var migrationFS embed.FS
 
 type DB struct {
-	*model.Queries
-	db *sql.DB
+	Queries *model.Queries
+	db      *sql.DB
 }
 
 func CreateAndMigrateDb(ctx context.Context, dsn string) (*DB, error) {

@@ -118,8 +118,12 @@ type contextKey struct{}
 
 var key contextKey
 
+func ContextWithUser(ctx context.Context, i int64) context.Context {
+	return context.WithValue(ctx, &key, i)
+}
+
 func RequestWithUser(r *http.Request, i int64) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), &key, i))
+	return r.WithContext(ContextWithUser(r.Context(), i))
 }
 
 func UserFromFromContext(ctx context.Context) int64 {

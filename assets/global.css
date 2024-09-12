@@ -92,7 +92,8 @@ textarea:disabled {
 }
 
 /* Style for buttons */
-button {
+button,
+.btn {
   background-color: #007bff;
   color: white;
   padding: 0.5rem 1rem;
@@ -101,13 +102,17 @@ button {
   cursor: pointer;
   font-size: 1rem;
   transition: background-color 0.3s;
+  appearance: none;
+  text-decoration-line: none;
 }
 
-button:hover {
+button:hover,
+.btn:hover {
   background-color: #0056b3;
 }
 
-button:disabled {
+button:disabled,
+.btn:disabled {
   background-color: #ddd;
   cursor: not-allowed;
 }

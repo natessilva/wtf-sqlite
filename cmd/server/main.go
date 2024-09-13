@@ -10,6 +10,8 @@ import (
 	"sqlite"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -57,9 +59,8 @@ func run() error {
 		log.Println("server running on port 8000")
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	go func() { log.Fatal(http.ListenAndServe(":6060", mux)) }()
+	http.Handle("/metrics", promhttp.Handler())
+	go func() { log.Fatal(http.ListenAndServe(":6060", nil)) }()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

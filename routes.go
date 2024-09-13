@@ -32,7 +32,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 		UseTLS:      useTLS,
 	}
 
-	router := httprouter.New()
+	router := NewInstrumentedRouter()
 
 	// if you are already authenticated, none of these routes make
 	// sense
@@ -138,11 +138,6 @@ func (h *Handler) handleGetSignup(w http.ResponseWriter, r *http.Request, p http
 }
 
 func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	err := r.ParseForm()
-	if err != nil {
-		handleError(w, err)
-		return
-	}
 	userName := r.FormValue("userName")
 	password := r.FormValue("password")
 	if userName == "" || password == "" {
@@ -199,11 +194,6 @@ func (h *Handler) handleGetNewDials(w http.ResponseWriter, r *http.Request, p ht
 }
 
 func (h *Handler) handlePostNewDials(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	err := r.ParseForm()
-	if err != nil {
-		handleError(w, err)
-		return
-	}
 	name := r.FormValue("name")
 	id, err := h.DialService.Create(r.Context(), name)
 	if err != nil {
@@ -252,11 +242,6 @@ func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p ht
 
 func (h *Handler) handlePostEditDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
-	if err != nil {
-		handleError(w, err)
-		return
-	}
-	err = r.ParseForm()
 	if err != nil {
 		handleError(w, err)
 		return

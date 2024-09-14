@@ -76,7 +76,7 @@ func requireAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		userId := UserFromFromContext(r.Context())
 		if userId == 0 {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("/login?next=%s", r.URL.Path), http.StatusSeeOther)
 			return
 		}
 		handle(w, r, p)
@@ -98,15 +98,10 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request, p httprout
 }
 
 func (h *Handler) handleGetLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	templates.Login("", "").Render(r.Context(), w)
+	templates.Login("", "", r.FormValue("next")).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	err := r.ParseForm()
-	if err != nil {
-		handleError(w, err)
-		return
-	}
 	userName := r.FormValue("userName")
 	password := r.FormValue("password")
 	output, err := h.AuthService.Login(r.Context(), AuthInput{
@@ -119,7 +114,7 @@ func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p http
 	}
 	if !output.OK {
 		w.WriteHeader(http.StatusUnauthorized)
-		templates.Login("Invalid email and/or password", userName).Render(r.Context(), w)
+		templates.Login("Invalid email and/or password", userName, r.FormValue("next")).Render(r.Context(), w)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -130,7 +125,11 @@ func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p http
 		Expires:  time.Now().AddDate(0, 0, 30),
 		Secure:   h.UseTLS,
 	})
-	http.Redirect(w, r, "/", http.StatusFound)
+	redirect := r.FormValue("next")
+	if redirect == "" {
+		redirect = "/"
+	}
+	http.Redirect(w, r, redirect, http.StatusFound)
 }
 
 func (h *Handler) handleGetSignup(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -166,7 +165,11 @@ func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p htt
 		Expires:  time.Now().AddDate(0, 0, 30),
 		Secure:   h.UseTLS,
 	})
-	http.Redirect(w, r, "/", http.StatusFound)
+	redirect := r.FormValue("next")
+	if redirect == "" {
+		redirect = "/"
+	}
+	http.Redirect(w, r, redirect, http.StatusFound)
 }
 
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

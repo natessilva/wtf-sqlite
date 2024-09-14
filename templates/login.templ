@@ -1,32 +1,35 @@
 package templates
 
+import "fmt"
+
 css loginForm() {
 	width: 285px;
 	margin: 0 auto;
 }
 
-templ Login(errorMsg, userName string) {
+templ Login(errorMsg, userName, next string) {
 	@Layout("login", false) {
 		<form method="post" class={ "p2", "spaced", loginForm() }>
+			<input type="hidden" name="next" value={ next }/>
 			<h1>Log in</h1>
 			<div>
 				<label for="userName">
 					Username
 				</label>
-				<input type="text" name="userName" id="userName" value={ userName } autofocus/>
+				<input type="text" name="userName" value={ userName } autofocus/>
 			</div>
 			<div>
 				<label for="password">
 					Password
 				</label>
-				<input type="password" name="password" id="password"/>
+				<input type="password" name="password"/>
 			</div>
 			if errorMsg != "" {
 				<div class="alert p2">{ errorMsg }</div>
 			}
 			<button type="submit">Login</button>
 			<div>
-				Not already a member? <a href="/signup">Sign up!</a>
+				Not already a member? <a href={ templ.URL(fmt.Sprintf("/signup?next=%s", next)) }>Sign up!</a>
 			</div>
 		</form>
 	}

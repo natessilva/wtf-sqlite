@@ -1,0 +1,7 @@
+package templates
+
+templ Error(authenticated bool) {
+	@Layout("Internal Error", authenticated) {
+		<h1>Internal server error</h1>
+	}
+}

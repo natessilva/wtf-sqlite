@@ -58,6 +58,9 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	mux.Handle("/", authService.Middleware(router))
 	mux.Handle("/assets/", http.FileServer(http.FS(assetsFS)))
 
+	router.NotFound = http.HandlerFunc(handleNotFound)
+	router.PanicHandler = handleError
+
 	return instrumentedHandler(mux)
 }
 
@@ -91,7 +94,7 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request, p httprout
 	}
 	user, err := h.UserService.Get(r.Context())
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	templates.Index(user.UserName).Render(r.Context(), w)
@@ -109,7 +112,7 @@ func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p http
 		Password: password,
 	})
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	if !output.OK {
@@ -141,7 +144,7 @@ func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p htt
 	password := r.FormValue("password")
 	if userName == "" || password == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		templates.Signup("Missing required values", "").Render(r.Context(), w)
+		templates.Signup("Missing required values", userName).Render(r.Context(), w)
 		return
 	}
 	output, err := h.AuthService.Signup(r.Context(), AuthInput{
@@ -149,12 +152,12 @@ func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p htt
 		Password: password,
 	})
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	if !output.OK {
 		w.WriteHeader(http.StatusUnauthorized)
-		templates.Signup("Username already claimed", "").Render(r.Context(), w)
+		templates.Signup("Username already claimed", userName).Render(r.Context(), w)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -186,7 +189,7 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request, p httprou
 func (h *Handler) handleDials(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	dials, err := h.DialService.List(r.Context())
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	templates.Dials(dials).Render(r.Context(), w)
@@ -200,7 +203,7 @@ func (h *Handler) handlePostNewDials(w http.ResponseWriter, r *http.Request, p h
 	name := r.FormValue("name")
 	id, err := h.DialService.Create(r.Context(), name)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/dials/%d", id), http.StatusFound)
@@ -209,7 +212,7 @@ func (h *Handler) handlePostNewDials(w http.ResponseWriter, r *http.Request, p h
 func (h *Handler) handleGetDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	dial, err := h.DialService.Get(r.Context(), id)
@@ -219,7 +222,7 @@ func (h *Handler) handleGetDial(w http.ResponseWriter, r *http.Request, p httpro
 			templates.NotFound(true).Render(r.Context(), w)
 			return
 		}
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	templates.Dial(dial).Render(r.Context(), w)
@@ -228,7 +231,7 @@ func (h *Handler) handleGetDial(w http.ResponseWriter, r *http.Request, p httpro
 func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	dial, err := h.DialService.Get(r.Context(), id)
@@ -237,7 +240,7 @@ func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p ht
 			w.WriteHeader(http.StatusNotFound)
 			templates.NotFound(true).Render(r.Context(), w)
 		}
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	templates.DialForm(dial.Name).Render(r.Context(), w)
@@ -246,7 +249,7 @@ func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p ht
 func (h *Handler) handlePostEditDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	name := r.FormValue("name")
@@ -260,7 +263,7 @@ func (h *Handler) handlePostEditDial(w http.ResponseWriter, r *http.Request, p h
 			templates.NotFound(true).Render(r.Context(), w)
 			return
 		}
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/dials/%d", id), http.StatusFound)
@@ -273,7 +276,7 @@ type PatchDial struct {
 func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 
@@ -281,7 +284,7 @@ func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p http
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&patch)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	err = h.DialService.SetValue(r.Context(), SetDialValue{
@@ -294,7 +297,7 @@ func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p http
 			templates.NotFound(true).Render(r.Context(), w)
 			return
 		}
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -303,18 +306,26 @@ func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p http
 func (h *Handler) handleDeleteDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 
 	err = h.DialService.Delete(r.Context(), id)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func handleError(w http.ResponseWriter, err error) {
+func handleError(w http.ResponseWriter, r *http.Request, err interface{}) {
+	ctx := r.Context()
 	w.WriteHeader(http.StatusInternalServerError)
+	templates.Error(UserFromFromContext(ctx) != 0).Render(ctx, w)
+}
+
+func handleNotFound(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	w.WriteHeader(http.StatusNotFound)
+	templates.NotFound(UserFromFromContext(ctx) != 0).Render(ctx, w)
 }

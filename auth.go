@@ -144,7 +144,7 @@ func (svc *AuthService) Middleware(handle http.Handler) http.Handler {
 			} else if err != sql.ErrNoRows {
 				// ErrNoRows just means that there isn't a session
 				// any other error means something unexpected happened
-				handleError(w, err)
+				handleError(w, r, err)
 				return
 			}
 		}

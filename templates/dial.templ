@@ -1,14 +1,17 @@
 package templates
 
-import "sqlite/model"
-import "strconv"
-import "fmt"
+import (
+	"fmt"
+	"sqlite/model"
+	"strconv"
+)
 
 templ Dial(d model.Dial) {
 	@Layout("Dials", true) {
 		<h1>Dials</h1>
 		<a class="btn" href={ templ.URL(fmt.Sprintf("/dials/%d/edit", d.ID)) }>Edit</a>
 		<button id="deleteBtn" type="button">Delete</button>
+		<form id="deleteForm" method="post" action={ templ.URL(fmt.Sprintf("/dials/%d/delete", d.ID)) }></form>
 		<div>{ d.Name }</div>
 		<input type="range" name="value" id="value" value={ strconv.FormatInt(d.Value, 10) } data-id={ strconv.FormatInt(d.ID, 10) }/>
 		<script type="text/javascript">
@@ -29,17 +32,12 @@ templ Dial(d model.Dial) {
 				});
 
 				const deleteBtn = document.getElementById("deleteBtn");
+				const deleteForm = document.getElementById("deleteForm");
 				deleteBtn.addEventListener('click', ()=>{
 					if(!confirm("Are you sure?")){
 						return
 					}
-					fetch('/dials/' + id, {
-						method: "DELETE",
-					}).then(response=>{
-						if(response.status < 400){
-							window.location.pathname = '/dials'
-						}
-					});
+					deleteForm.submit()
 				})
 			});
 		</script>

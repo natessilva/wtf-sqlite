@@ -12,14 +12,10 @@ order by modified_at desc;
 select * from dial where user_id = ? and id = ?;
 
 -- name: UpdateDial :exec
-update dial set name = ? where id = ?
-returning id;
+update dial set name = ? where id = ?;
 
 -- name: SetDialValue :exec
-update dial set value = ? where id = ?
-returning id;
-
+update dial set value = ? where id = ?;
 
 -- name: DeleteDial :exec
-delete from dial where id = ?
-returning id;
+delete from dial where id = ?;

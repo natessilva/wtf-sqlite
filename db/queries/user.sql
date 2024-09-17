@@ -10,11 +10,7 @@ select * from user where user_name = ?;
 select * from user where id = ?;
 
 -- name: UpdateUser :exec
-update user
-set user_name = ?
-where id = ?;
+update user set user_name = ? where id = ?;
 
 -- name: SetPassword :exec
-update user
-set password = ?
-where id = ?;
+update user set password = ? where id = ?;

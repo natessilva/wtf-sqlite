@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sqlite/model"
 	"strings"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -59,9 +60,9 @@ func (svc *AuthService) Signup(ctx context.Context, input AuthInput) (AuthOutput
 	}
 	token := sessionID.String()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
-		ID:     token,
-		UserID: userID,
-		Ttl:    30,
+		ID:        token,
+		UserID:    userID,
+		ExpiresAt: time.Now().AddDate(0, 0, 30),
 	})
 	return AuthOutput{
 		Token: token,
@@ -91,9 +92,9 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 	}
 	token := sessionID.String()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
-		ID:     token,
-		UserID: user.ID,
-		Ttl:    30,
+		ID:        token,
+		UserID:    user.ID,
+		ExpiresAt: time.Now().AddDate(0, 0, 30),
 	})
 	// otherwise we're in
 	return AuthOutput{

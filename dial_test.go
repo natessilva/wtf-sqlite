@@ -27,7 +27,7 @@ func TestDialService(t *testing.T) {
 	}
 
 	// set the logged in user
-	ctx = sqlite.ContextWithUser(ctx, id)
+	ctx = sqlite.ContextWithUser(ctx, model.TeamUser{UserID: id})
 
 	dials, err := svc.List(ctx)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestDialService(t *testing.T) {
 	}
 
 	// log in the second user
-	ctx = sqlite.ContextWithUser(ctx, id2)
+	ctx = sqlite.ContextWithUser(ctx, model.TeamUser{UserID: id2})
 	dials, err = svc.List(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +110,7 @@ func TestDialService(t *testing.T) {
 	}
 
 	// first user cannot see second user's ids
-	ctx = sqlite.ContextWithUser(ctx, id)
+	ctx = sqlite.ContextWithUser(ctx, model.TeamUser{UserID: id})
 	_, err = svc.Get(ctx, dialId2)
 	if err != sql.ErrNoRows {
 		t.Fatal("expected rows we don't have access to to be invisible")

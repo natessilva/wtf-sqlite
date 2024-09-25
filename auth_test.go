@@ -28,12 +28,12 @@ func TestAuthServiceSignup(t *testing.T) {
 		t.Fatalf("expected successful signup")
 		return
 	}
-	userID, err := svc.GetUserFromSession(ctx, output.Token)
+	identity, err := svc.GetTeamUserFromSession(ctx, output.Token)
 	if err != nil {
 		t.Fatal(err)
 		return
 	}
-	if userID == 0 {
+	if identity.ID == 0 {
 		t.Fatalf("expected non-zero user, got 0")
 		return
 	}

@@ -47,9 +47,30 @@ func (svc *AuthService) Signup(ctx context.Context, input AuthInput) (AuthOutput
 	if err != nil {
 		return AuthOutput{}, err
 	}
-	userID, err := svc.db.Queries.CreateUser(ctx, model.CreateUserParams{
-		UserName: userName,
-		Password: hash,
+	var tuID int64
+	err = svc.db.Transaction(ctx, func(ctx context.Context, q *model.Queries) error {
+		userID, err := q.CreateUser(ctx, model.CreateUserParams{
+			UserName: userName,
+			Password: hash,
+		})
+		if err != nil {
+			return err
+		}
+		teamID, err := q.CreateTeam(ctx, userName)
+		if err != nil {
+			return err
+		}
+		tuID, err = q.CreateTeamUser(ctx, model.CreateTeamUserParams{
+			TeamID: teamID,
+			UserID: userID,
+		})
+		if err != nil {
+			return err
+		}
+		return q.SetDefaultTeamUser(ctx, model.SetDefaultTeamUserParams{
+			IsDefault: true,
+			ID:        tuID,
+		})
 	})
 	if err != nil {
 		return AuthOutput{}, err
@@ -60,9 +81,9 @@ func (svc *AuthService) Signup(ctx context.Context, input AuthInput) (AuthOutput
 	}
 	token := sessionID.String()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
-		ID:        token,
-		UserID:    userID,
-		ExpiresAt: time.Now().AddDate(0, 0, 30),
+		ID:         token,
+		TeamUserID: tuID,
+		ExpiresAt:  time.Now().AddDate(0, 0, 30),
 	})
 	return AuthOutput{
 		Token: token,
@@ -86,15 +107,19 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 		// if the password doesn't match they cannot login
 		return AuthOutput{OK: false}, nil
 	}
+	teamUser, err := svc.db.Queries.GetDefaultTeamUser(ctx, user.ID)
+	if err != nil {
+		return AuthOutput{}, err
+	}
 	sessionID, err := uuid.NewV4()
 	if err != nil {
 		return AuthOutput{}, err
 	}
 	token := sessionID.String()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
-		ID:        token,
-		UserID:    user.ID,
-		ExpiresAt: time.Now().AddDate(0, 0, 30),
+		ID:         token,
+		TeamUserID: teamUser.ID,
+		ExpiresAt:  time.Now().AddDate(0, 0, 30),
 	})
 	// otherwise we're in
 	return AuthOutput{
@@ -103,44 +128,44 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 	}, nil
 }
 
-func (svc *AuthService) GetUserFromSession(ctx context.Context, token string) (int64, error) {
+func (svc *AuthService) GetTeamUserFromSession(ctx context.Context, token string) (model.TeamUser, error) {
 	session, err := svc.db.Queries.GetSession(ctx, token)
 	if err != nil {
-		return 0, err
+		return model.TeamUser{}, err
 	}
 	if session.Expired {
 		svc.db.Queries.DeleteSession(ctx, token)
-		return 0, nil
+		return model.TeamUser{}, nil
 	}
-	return session.UserID, nil
+	return svc.db.Queries.GetTeamUser(ctx, session.TeamUserID)
 }
 
 type contextKey struct{}
 
 var key contextKey
 
-func ContextWithUser(ctx context.Context, i int64) context.Context {
+func ContextWithUser(ctx context.Context, i model.TeamUser) context.Context {
 	return context.WithValue(ctx, &key, i)
 }
 
-func RequestWithUser(r *http.Request, i int64) *http.Request {
+func RequestWithUser(r *http.Request, i model.TeamUser) *http.Request {
 	return r.WithContext(ContextWithUser(r.Context(), i))
 }
 
-func UserFromFromContext(ctx context.Context) int64 {
+func UserFromFromContext(ctx context.Context) model.TeamUser {
 	value := ctx.Value(&key)
 	if value != nil {
-		return value.(int64)
+		return value.(model.TeamUser)
 	}
-	return 0
+	return model.TeamUser{}
 }
 
 func (svc *AuthService) Middleware(handle http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie("token"); err == nil {
-			if userId, err := svc.GetUserFromSession(r.Context(), cookie.Value); err == nil && userId != 0 {
+			if tu, err := svc.GetTeamUserFromSession(r.Context(), cookie.Value); err == nil && tu.ID != 0 {
 				// if we got a user, put it in the request context
-				r = RequestWithUser(r, userId)
+				r = RequestWithUser(r, tu)
 
 			} else if err != sql.ErrNoRows {
 				// ErrNoRows just means that there isn't a session

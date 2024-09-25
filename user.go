@@ -16,5 +16,5 @@ func NewUserService(db *DB) *UserService {
 }
 
 func (svc *UserService) Get(ctx context.Context) (model.User, error) {
-	return svc.db.Queries.GetUserById(ctx, UserFromFromContext(ctx))
+	return svc.db.Queries.GetUserById(ctx, UserFromFromContext(ctx).UserID)
 }

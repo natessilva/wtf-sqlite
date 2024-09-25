@@ -66,7 +66,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 
 func requireNoAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		userId := UserFromFromContext(r.Context())
+		userId := UserFromFromContext(r.Context()).UserID
 		if userId != 0 {
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
@@ -77,7 +77,7 @@ func requireNoAuth(handle httprouter.Handle) httprouter.Handle {
 
 func requireAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		userId := UserFromFromContext(r.Context())
+		userId := UserFromFromContext(r.Context()).UserID
 		if userId == 0 {
 			http.Redirect(w, r, fmt.Sprintf("/login?next=%s", r.URL.Path), http.StatusSeeOther)
 			return
@@ -87,7 +87,7 @@ func requireAuth(handle httprouter.Handle) httprouter.Handle {
 }
 
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	userId := UserFromFromContext(r.Context())
+	userId := UserFromFromContext(r.Context()).UserID
 	if userId == 0 {
 		templates.IndexNoAuth().Render(r.Context(), w)
 		return
@@ -326,11 +326,11 @@ func (h *Handler) handleDeleteDial(w http.ResponseWriter, r *http.Request, p htt
 func handleError(w http.ResponseWriter, r *http.Request, err interface{}) {
 	ctx := r.Context()
 	w.WriteHeader(http.StatusInternalServerError)
-	templates.Error(UserFromFromContext(ctx) != 0).Render(ctx, w)
+	templates.Error(UserFromFromContext(ctx).UserID != 0).Render(ctx, w)
 }
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	w.WriteHeader(http.StatusNotFound)
-	templates.NotFound(UserFromFromContext(ctx) != 0).Render(ctx, w)
+	templates.NotFound(UserFromFromContext(ctx).UserID != 0).Render(ctx, w)
 }

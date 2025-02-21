@@ -56,12 +56,19 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	router.POST("/dials/:id/delete", requireAuth(h.handleDeleteDial))
 
 	mux.Handle("/", authService.Middleware(router))
-	mux.Handle("/assets/", http.FileServer(http.FS(assetsFS)))
+	mux.Handle("/assets/", cache(http.FileServer(http.FS(assetsFS))))
 
 	router.NotFound = http.HandlerFunc(handleNotFound)
 	router.PanicHandler = handleError
 
 	return instrumentedHandler(mux)
+}
+
+func cache(handler http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", "max-age=300, public, must-revalidate, no-transform")
+		handler.ServeHTTP(w, r)
+	}
 }
 
 func requireNoAuth(handle httprouter.Handle) httprouter.Handle {

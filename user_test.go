@@ -23,8 +23,8 @@ func TestUserService(t *testing.T) {
 		t.Fatalf("expected error")
 	}
 	// set the authenticated userID to one that doesn't exist
-	ctx = sqlite.ContextWithUser(ctx, model.TeamUser{
-		UserID: 1,
+	ctx = sqlite.ContextWithUser(ctx, model.User{
+		ID: 1,
 	})
 	_, err = svc.Get(ctx)
 	if err == nil {
@@ -42,7 +42,7 @@ func TestUserService(t *testing.T) {
 	}
 
 	// set the authenticated user to the existing user
-	ctx = sqlite.ContextWithUser(ctx, model.TeamUser{UserID: id})
+	ctx = sqlite.ContextWithUser(ctx, model.User{ID: id})
 	user, err := svc.Get(ctx)
 	if err != nil {
 		t.Fatal(fmt.Errorf("expected no error, got %w", err))

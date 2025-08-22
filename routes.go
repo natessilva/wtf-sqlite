@@ -24,7 +24,6 @@ type Handler struct {
 }
 
 func NewHandler(authService *AuthService, userService *UserService, dialService *DialService, useTLS bool) http.Handler {
-	mux := http.NewServeMux()
 	h := &Handler{
 		AuthService: authService,
 		UserService: userService,
@@ -34,8 +33,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 
 	router := NewInstrumentedRouter()
 
-	// if you are already authenticated, none of these routes make
-	// sense
+	// Authenticated users will be redirected away from these routes
 	router.GET("/login", requireNoAuth(h.handleGetLogin))
 	router.POST("/login", requireNoAuth(h.handlePostLogin))
 	router.GET("/signup", requireNoAuth(h.handleGetSignup))
@@ -45,7 +43,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	router.GET("/logout", h.handleLogout)
 	router.GET("/", h.handleIndex)
 
-	// these routes required an authenticated user
+	// Unauthenticated users will be redirected to login from these routes
 	router.GET("/dials", requireAuth(h.handleDials))
 	router.GET("/newDial", requireAuth(h.handleGetNewDials))
 	router.POST("/newDial", requireAuth(h.handlePostNewDials))
@@ -55,6 +53,7 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	router.PATCH("/dials/:id", requireAuth(h.handlePatchDial))
 	router.POST("/dials/:id/delete", requireAuth(h.handleDeleteDial))
 
+	mux := http.NewServeMux()
 	mux.Handle("/", authService.Middleware(router))
 	mux.Handle("/assets/", cache(http.FileServer(http.FS(assetsFS))))
 
@@ -217,11 +216,7 @@ func (h *Handler) handlePostNewDials(w http.ResponseWriter, r *http.Request, p h
 }
 
 func (h *Handler) handleGetDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
-	if err != nil {
-		handleError(w, r, err)
-		return
-	}
+	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
 	dial, err := h.DialService.Get(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -236,11 +231,7 @@ func (h *Handler) handleGetDial(w http.ResponseWriter, r *http.Request, p httpro
 }
 
 func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
-	if err != nil {
-		handleError(w, r, err)
-		return
-	}
+	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
 	dial, err := h.DialService.Get(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -254,13 +245,9 @@ func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p ht
 }
 
 func (h *Handler) handlePostEditDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
-	if err != nil {
-		handleError(w, r, err)
-		return
-	}
+	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
 	name := r.FormValue("name")
-	err = h.DialService.Update(r.Context(), UpdateDial{
+	err := h.DialService.Update(r.Context(), UpdateDial{
 		ID:   id,
 		Name: name,
 	})
@@ -281,15 +268,10 @@ type PatchDial struct {
 }
 
 func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
-	if err != nil {
-		handleError(w, r, err)
-		return
-	}
-
+	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
 	var patch PatchDial
 	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&patch)
+	err := decoder.Decode(&patch)
 	if err != nil {
 		handleError(w, r, err)
 		return
@@ -311,13 +293,9 @@ func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p http
 }
 
 func (h *Handler) handleDeleteDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id, err := strconv.ParseInt(p.ByName("id"), 10, 64)
-	if err != nil {
-		handleError(w, r, err)
-		return
-	}
+	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
 
-	err = h.DialService.Delete(r.Context(), id)
+	err := h.DialService.Delete(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)

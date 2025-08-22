@@ -4,3 +4,4 @@ create table user(
   password blob not null,
   created_at datetime not null default current_timestamp
 );
+create index user_user_name_idx on user(user_name);

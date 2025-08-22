@@ -75,18 +75,18 @@ func (svc *AuthService) Signup(ctx context.Context, input AuthInput) (AuthOutput
 	if err != nil {
 		return AuthOutput{}, err
 	}
-	sessionID, err := uuid.NewV4()
+	sessionID, err := uuid.NewV7()
 	if err != nil {
 		return AuthOutput{}, err
 	}
-	token := sessionID.String()
+	token := sessionID.Bytes()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
 		ID:         token,
 		TeamUserID: tuID,
 		ExpiresAt:  time.Now().AddDate(0, 0, 30),
 	})
 	return AuthOutput{
-		Token: token,
+		Token: sessionID.String(),
 		OK:    true,
 	}, nil
 }
@@ -111,11 +111,11 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 	if err != nil {
 		return AuthOutput{}, err
 	}
-	sessionID, err := uuid.NewV4()
+	sessionID, err := uuid.NewV7()
 	if err != nil {
 		return AuthOutput{}, err
 	}
-	token := sessionID.String()
+	token := sessionID.Bytes()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
 		ID:         token,
 		TeamUserID: teamUser.ID,
@@ -123,18 +123,23 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 	})
 	// otherwise we're in
 	return AuthOutput{
-		Token: token,
+		Token: sessionID.String(),
 		OK:    true,
 	}, nil
 }
 
-func (svc *AuthService) GetTeamUserFromSession(ctx context.Context, token string) (model.TeamUser, error) {
-	session, err := svc.db.Queries.GetSession(ctx, token)
+func (svc *AuthService) GetTeamUserFromSession(ctx context.Context, tokenString string) (model.TeamUser, error) {
+	token, err := uuid.FromString(tokenString)
+	if err != nil {
+		return model.TeamUser{}, err
+	}
+
+	session, err := svc.db.Queries.GetSession(ctx, token.Bytes())
 	if err != nil {
 		return model.TeamUser{}, err
 	}
 	if session.Expired {
-		svc.db.Queries.DeleteSession(ctx, token)
+		svc.db.Queries.DeleteSession(ctx, token.Bytes())
 		return model.TeamUser{}, nil
 	}
 	return svc.db.Queries.GetTeamUser(ctx, session.TeamUserID)

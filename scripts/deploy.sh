@@ -9,7 +9,6 @@ CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_E
 echo "Copying the binary to the server..."
 scp -q server "$REMOTE_HOST:~/server_new"
 
-echo "Restarting the service on the server..."
 ssh "$REMOTE_HOST" 'bash -s' << EOF
     set -e
 

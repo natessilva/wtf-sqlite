@@ -1,13 +1,13 @@
 module sqlite
 
-go 1.21.3
+go 1.24.6
 
 require github.com/mattn/go-sqlite3 v1.14.22
 
 require (
-	github.com/a-h/templ v0.2.771
+	github.com/a-h/templ v0.3.857
 	github.com/julienschmidt/httprouter v1.3.0
-	golang.org/x/crypto v0.27.0
+	golang.org/x/crypto v0.36.0
 )
 
 require (
@@ -23,8 +23,8 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	golang.org/x/net v0.28.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )

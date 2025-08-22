@@ -47,30 +47,9 @@ func (svc *AuthService) Signup(ctx context.Context, input AuthInput) (AuthOutput
 	if err != nil {
 		return AuthOutput{}, err
 	}
-	var tuID int64
-	err = svc.db.Transaction(ctx, func(ctx context.Context, q *model.Queries) error {
-		userID, err := q.CreateUser(ctx, model.CreateUserParams{
-			UserName: userName,
-			Password: hash,
-		})
-		if err != nil {
-			return err
-		}
-		teamID, err := q.CreateTeam(ctx, userName)
-		if err != nil {
-			return err
-		}
-		tuID, err = q.CreateTeamUser(ctx, model.CreateTeamUserParams{
-			TeamID: teamID,
-			UserID: userID,
-		})
-		if err != nil {
-			return err
-		}
-		return q.SetDefaultTeamUser(ctx, model.SetDefaultTeamUserParams{
-			IsDefault: true,
-			ID:        tuID,
-		})
+	userId, err := svc.db.Queries.CreateUser(ctx, model.CreateUserParams{
+		UserName: userName,
+		Password: hash,
 	})
 	if err != nil {
 		return AuthOutput{}, err
@@ -81,9 +60,9 @@ func (svc *AuthService) Signup(ctx context.Context, input AuthInput) (AuthOutput
 	}
 	token := sessionID.Bytes()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
-		ID:         token,
-		TeamUserID: tuID,
-		ExpiresAt:  time.Now().AddDate(0, 0, 30),
+		ID:        token,
+		UserID:    userId,
+		ExpiresAt: time.Now().AddDate(0, 0, 30),
 	})
 	return AuthOutput{
 		Token: sessionID.String(),
@@ -107,19 +86,15 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 		// if the password doesn't match they cannot login
 		return AuthOutput{OK: false}, nil
 	}
-	teamUser, err := svc.db.Queries.GetDefaultTeamUser(ctx, user.ID)
-	if err != nil {
-		return AuthOutput{}, err
-	}
 	sessionID, err := uuid.NewV7()
 	if err != nil {
 		return AuthOutput{}, err
 	}
 	token := sessionID.Bytes()
 	svc.db.Queries.CreateSession(ctx, model.CreateSessionParams{
-		ID:         token,
-		TeamUserID: teamUser.ID,
-		ExpiresAt:  time.Now().AddDate(0, 0, 30),
+		ID:        token,
+		UserID:    user.ID,
+		ExpiresAt: time.Now().AddDate(0, 0, 30),
 	})
 	// otherwise we're in
 	return AuthOutput{
@@ -128,49 +103,49 @@ func (svc *AuthService) Login(ctx context.Context, input AuthInput) (AuthOutput,
 	}, nil
 }
 
-func (svc *AuthService) GetTeamUserFromSession(ctx context.Context, tokenString string) (model.TeamUser, error) {
+func (svc *AuthService) GetUserFromSession(ctx context.Context, tokenString string) (model.User, error) {
 	token, err := uuid.FromString(tokenString)
 	if err != nil {
-		return model.TeamUser{}, err
+		return model.User{}, err
 	}
 
 	session, err := svc.db.Queries.GetSession(ctx, token.Bytes())
 	if err != nil {
-		return model.TeamUser{}, err
+		return model.User{}, err
 	}
 	if session.Expired {
 		svc.db.Queries.DeleteSession(ctx, token.Bytes())
-		return model.TeamUser{}, nil
+		return model.User{}, nil
 	}
-	return svc.db.Queries.GetTeamUser(ctx, session.TeamUserID)
+	return svc.db.Queries.GetUserById(ctx, session.UserID)
 }
 
 type contextKey struct{}
 
 var key contextKey
 
-func ContextWithUser(ctx context.Context, i model.TeamUser) context.Context {
+func ContextWithUser(ctx context.Context, i model.User) context.Context {
 	return context.WithValue(ctx, &key, i)
 }
 
-func RequestWithUser(r *http.Request, i model.TeamUser) *http.Request {
+func RequestWithUser(r *http.Request, i model.User) *http.Request {
 	return r.WithContext(ContextWithUser(r.Context(), i))
 }
 
-func UserFromFromContext(ctx context.Context) model.TeamUser {
+func UserFromContext(ctx context.Context) model.User {
 	value := ctx.Value(&key)
 	if value != nil {
-		return value.(model.TeamUser)
+		return value.(model.User)
 	}
-	return model.TeamUser{}
+	return model.User{}
 }
 
 func (svc *AuthService) Middleware(handle http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie("token"); err == nil {
-			if tu, err := svc.GetTeamUserFromSession(r.Context(), cookie.Value); err == nil && tu.ID != 0 {
+			if user, err := svc.GetUserFromSession(r.Context(), cookie.Value); err == nil && user.ID != 0 {
 				// if we got a user, put it in the request context
-				r = RequestWithUser(r, tu)
+				r = RequestWithUser(r, user)
 
 			} else if err != sql.ErrNoRows {
 				// ErrNoRows just means that there isn't a session

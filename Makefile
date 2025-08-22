@@ -21,3 +21,8 @@ test: generate
 
 deploy: generate
 	@scripts/deploy.sh
+
+clean:
+	@rm -f .sqlc_generated .templ_generated
+	@rm -rf db/model
+	@rm -rf templates/*.go

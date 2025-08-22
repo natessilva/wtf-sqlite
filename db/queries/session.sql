@@ -1,6 +1,5 @@
 -- name: CreateSession :exec
-insert into session(id, user_id, expires_at)
-values(?,?,?);
+insert into session(id, user_id, expires_at) values(?,?,?);
 
 -- name: DeleteSession :exec
 delete from session where id = ?;

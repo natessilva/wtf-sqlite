@@ -1,12 +1,8 @@
 -- name: CreateDial :one
-insert into dial(user_id, name)
-values(?,?)
-returning id;
+insert into dial(user_id, name) values(?,?) returning id;
 
 -- name: ListDials :many
-select * from dial
-where user_id = ?
-order by modified_at desc;
+select * from dial where user_id = ? order by modified_at desc;
 
 -- name: GetDial :one
 select * from dial where user_id = ? and id = ?;

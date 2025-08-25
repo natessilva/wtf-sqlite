@@ -26,7 +26,7 @@ func run() error {
 
 	authService := sqlite.NewAuthService(db)
 	userService := sqlite.NewUserService(db)
-	dialService := sqlite.NewDialService(db)
+	taskService := sqlite.NewTaskService(db)
 
 	sessionCleanupService := sqlite.NewSessionCleanupService(db)
 	defer sessionCleanupService.Close()
@@ -35,7 +35,7 @@ func run() error {
 
 	env := os.Getenv("ENV")
 
-	handler := sqlite.NewHandler(authService, userService, dialService, env == "prod")
+	handler := sqlite.NewHandler(authService, userService, taskService, env == "prod")
 
 	if env == "prod" {
 		server = startProdServer(handler)

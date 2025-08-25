@@ -1,0 +1,29 @@
+package templates
+
+import (
+	"fmt"
+	"sqlite/model"
+)
+
+templ Task(d model.Task) {
+	@Layout("Tasks", true) {
+		<h1>Tasks</h1>
+		<a class="btn" href={ templ.URL(fmt.Sprintf("/tasks/%d/edit", d.ID)) }>Edit</a>
+		<button id="deleteBtn" type="button">Delete</button>
+		<form id="deleteForm" method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d/delete", d.ID)) }></form>
+		<div>{ d.Title }</div>
+		<div>{ d.Description }</div>
+		<script type="text/javascript">
+			window.addEventListener('DOMContentLoaded', (event) => {
+				const deleteBtn = document.getElementById("deleteBtn");
+				const deleteForm = document.getElementById("deleteForm");
+				deleteBtn.addEventListener('click', ()=>{
+					if(!confirm("Are you sure?")){
+									return
+					}
+					deleteForm.submit()
+				})
+			});
+		</script>
+	}
+}

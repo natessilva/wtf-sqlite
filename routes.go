@@ -3,9 +3,9 @@ package sqlite
 import (
 	"database/sql"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"sqlite/model"
 	"sqlite/templates"
 	"strconv"
 	"time"
@@ -19,15 +19,15 @@ var assetsFS embed.FS
 type Handler struct {
 	AuthService *AuthService
 	UserService *UserService
-	DialService *DialService
+	TaskService *TaskService
 	UseTLS      bool
 }
 
-func NewHandler(authService *AuthService, userService *UserService, dialService *DialService, useTLS bool) http.Handler {
+func NewHandler(authService *AuthService, userService *UserService, taskService *TaskService, useTLS bool) http.Handler {
 	h := &Handler{
 		AuthService: authService,
 		UserService: userService,
-		DialService: dialService,
+		TaskService: taskService,
 		UseTLS:      useTLS,
 	}
 
@@ -44,14 +44,13 @@ func NewHandler(authService *AuthService, userService *UserService, dialService 
 	router.GET("/", h.handleIndex)
 
 	// Unauthenticated users will be redirected to login from these routes
-	router.GET("/dials", requireAuth(h.handleDials))
-	router.GET("/newDial", requireAuth(h.handleGetNewDials))
-	router.POST("/newDial", requireAuth(h.handlePostNewDials))
-	router.GET("/dials/:id", requireAuth(h.handleGetDial))
-	router.GET("/dials/:id/edit", requireAuth(h.handleGetEditDial))
-	router.POST("/dials/:id/edit", requireAuth(h.handlePostEditDial))
-	router.PATCH("/dials/:id", requireAuth(h.handlePatchDial))
-	router.POST("/dials/:id/delete", requireAuth(h.handleDeleteDial))
+	router.GET("/tasks", requireAuth(h.handleTasks))
+	router.GET("/newTask", requireAuth(h.handleGetNewTask))
+	router.POST("/newTask", requireAuth(h.handlePostNewTask))
+	router.GET("/tasks/:id", requireAuth(h.handleGetTask))
+	router.GET("/tasks/:id/edit", requireAuth(h.handleGetEditTask))
+	router.POST("/tasks/:id/edit", requireAuth(h.handlePostEditTask))
+	router.POST("/tasks/:id/delete", requireAuth(h.handleDeleteTask))
 
 	mux := http.NewServeMux()
 	mux.Handle("/", authService.Middleware(router))
@@ -192,32 +191,33 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request, p httprou
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (h *Handler) handleDials(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	dials, err := h.DialService.List(r.Context())
+func (h *Handler) handleTasks(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	tasks, err := h.TaskService.List(r.Context())
 	if err != nil {
 		handleError(w, r, err)
 		return
 	}
-	templates.Dials(dials).Render(r.Context(), w)
+	templates.Tasks(tasks).Render(r.Context(), w)
 }
 
-func (h *Handler) handleGetNewDials(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	templates.DialForm("").Render(r.Context(), w)
+func (h *Handler) handleGetNewTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	templates.TaskForm(model.Task{}).Render(r.Context(), w)
 }
 
-func (h *Handler) handlePostNewDials(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	name := r.FormValue("name")
-	id, err := h.DialService.Create(r.Context(), name)
+func (h *Handler) handlePostNewTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	title := r.FormValue("title")
+	description := r.FormValue("description")
+	id, err := h.TaskService.Create(r.Context(), title, description)
 	if err != nil {
 		handleError(w, r, err)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/dials/%d", id), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/tasks/%d", id), http.StatusFound)
 }
 
-func (h *Handler) handleGetDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
-	dial, err := h.DialService.Get(r.Context(), id)
+	task, err := h.TaskService.Get(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -227,12 +227,12 @@ func (h *Handler) handleGetDial(w http.ResponseWriter, r *http.Request, p httpro
 		handleError(w, r, err)
 		return
 	}
-	templates.Dial(dial).Render(r.Context(), w)
+	templates.Task(task).Render(r.Context(), w)
 }
 
-func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (h *Handler) handleGetEditTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
-	dial, err := h.DialService.Get(r.Context(), id)
+	task, err := h.TaskService.Get(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -241,15 +241,17 @@ func (h *Handler) handleGetEditDial(w http.ResponseWriter, r *http.Request, p ht
 		handleError(w, r, err)
 		return
 	}
-	templates.DialForm(dial.Name).Render(r.Context(), w)
+	templates.TaskForm(task).Render(r.Context(), w)
 }
 
-func (h *Handler) handlePostEditDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (h *Handler) handlePostEditTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
-	name := r.FormValue("name")
-	err := h.DialService.Update(r.Context(), UpdateDial{
-		ID:   id,
-		Name: name,
+	title := r.FormValue("title")
+	description := r.FormValue("description")
+	err := h.TaskService.Update(r.Context(), model.Task{
+		ID:          id,
+		Title:       title,
+		Description: description,
 	})
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -260,26 +262,13 @@ func (h *Handler) handlePostEditDial(w http.ResponseWriter, r *http.Request, p h
 		handleError(w, r, err)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/dials/%d", id), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/tasks/%d", id), http.StatusFound)
 }
 
-type PatchDial struct {
-	Value int64 `json:"value"`
-}
-
-func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
-	var patch PatchDial
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&patch)
-	if err != nil {
-		handleError(w, r, err)
-		return
-	}
-	err = h.DialService.SetValue(r.Context(), SetDialValue{
-		ID:    id,
-		Value: patch.Value,
-	})
+
+	err := h.TaskService.Delete(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -289,23 +278,7 @@ func (h *Handler) handlePatchDial(w http.ResponseWriter, r *http.Request, p http
 		handleError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *Handler) handleDeleteDial(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
-
-	err := h.DialService.Delete(r.Context(), id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			templates.NotFound(true).Render(r.Context(), w)
-			return
-		}
-		handleError(w, r, err)
-		return
-	}
-	http.Redirect(w, r, "/dials", http.StatusSeeOther)
+	http.Redirect(w, r, "/tasks", http.StatusSeeOther)
 }
 
 func handleError(w http.ResponseWriter, r *http.Request, err interface{}) {

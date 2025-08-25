@@ -4,7 +4,7 @@ A Go web application using SQLite for data storage and Templ for HTML templating
 
 ## Project Overview
 
-This application provides user authentication and a "dials" interface where users can create and modify personal dial objects. It uses:
+This application provides user authentication and a "tasks" interface where users can create and modify a task list. It uses:
 
 - **SQLite** for data storage
 - **Templ** for HTML templating

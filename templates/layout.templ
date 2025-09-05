@@ -10,12 +10,9 @@ templ Layout(title string, authenticated bool) {
 			<link rel="stylesheet" href="/assets/global.css"/>
 		</head>
 		<body>
-			if authenticated {
-				@Nav()
-			}
-			<main>
+			<div class="container">
 				{ children... }
-			</main>
+			</div>
 		</body>
 	</html>
 }

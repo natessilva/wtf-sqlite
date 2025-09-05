@@ -15,7 +15,7 @@ func NewTaskService(db *DB) *TaskService {
 	}
 }
 
-func (svc *TaskService) Create(ctx context.Context, title, description string) (int64, error) {
+func (svc *TaskService) Create(ctx context.Context, title, description string) (model.Task, error) {
 	return svc.db.Queries.CreateTask(ctx, model.CreateTaskParams{
 		UserID:      UserFromContext(ctx).ID,
 		Title:       title,

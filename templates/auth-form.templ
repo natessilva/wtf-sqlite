@@ -1,0 +1,46 @@
+package templates
+
+import "fmt"
+
+func authTitle(login bool) string {
+	if login {
+		return "Log in"
+	}
+	return "Sign up"
+}
+
+templ AuthForm(login bool, errorMsg, userName, next string) {
+	@Layout(authTitle(login), false) {
+		<div class="form-container login-container">
+			<form method="post" class="spaced">
+				<input type="hidden" name="next" value={ next }/>
+				<h1>{ authTitle(login) }</h1>
+				<div>
+					<label for="userName">
+						Username
+					</label>
+					<input type="text" name="userName" value={ userName } autofocus/>
+				</div>
+				<div>
+					<label for="password">
+						Password
+					</label>
+					<input type="password" name="password"/>
+				</div>
+				if errorMsg != "" {
+					<div class="alert p2">{ errorMsg }</div>
+				}
+				<button type="submit">{ authTitle(login) }</button>
+				<div class="form-footer">
+					if login {
+						<span>Not already a member?</span>
+						<a href={ templ.URL(fmt.Sprintf("/signup?next=%s", next)) }>Sign up!</a>
+					} else {
+						<span>Already a member?</span>
+						<a href={ templ.URL(fmt.Sprintf("/login?next=%s", next)) }>Log in!</a>
+					}
+				</div>
+			</form>
+		</div>
+	}
+}

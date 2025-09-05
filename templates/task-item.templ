@@ -1,0 +1,12 @@
+package templates
+
+import (
+	"fmt"
+	"sqlite/model"
+)
+
+templ TaskItem(task model.Task) {
+	<a href={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="task-item">
+		{ task.Title }
+	</a>
+}

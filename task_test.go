@@ -37,12 +37,12 @@ func TestTaskService(t *testing.T) {
 		t.Fatalf("expected zero tasks, got %d", len(tasks))
 	}
 
-	taskId, err := svc.Create(ctx, "test", "description")
+	taskCreated, err := svc.Create(ctx, "test", "description")
 	if err != nil {
 		t.Fatal(err)
 		return
 	}
-	task, err := svc.Get(ctx, taskId)
+	task, err := svc.Get(ctx, taskCreated.ID)
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -67,7 +67,7 @@ func TestTaskService(t *testing.T) {
 		t.Fatal(err)
 		return
 	}
-	updatedTask, err := svc.Get(ctx, taskId)
+	updatedTask, err := svc.Get(ctx, taskCreated.ID)
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -82,7 +82,7 @@ func TestTaskService(t *testing.T) {
 		t.Fatalf("expected completed true, got false")
 	}
 
-	err = svc.Delete(ctx, taskId)
+	err = svc.Delete(ctx, taskCreated.ID)
 	if err != nil {
 		t.Fatal(err)
 		return

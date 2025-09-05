@@ -1,8 +1,8 @@
 -- name: CreateTask :one
-insert into task(user_id, title, description) values(?,?,?) returning id;
+insert into task(user_id, title, description) values(?,?,?) returning *;
 
 -- name: ListTasks :many
-select * from task where user_id = ? order by created_at desc;
+select * from task where user_id = ? order by created_at;
 
 -- name: GetTask :one
 select * from task where user_id = ? and id = ?;

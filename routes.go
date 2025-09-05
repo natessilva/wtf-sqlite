@@ -48,13 +48,12 @@ func NewHandler(authService *AuthService, userService *UserService, taskService 
 	router.GET("/newTask", requireAuth(h.handleGetNewTask))
 	router.POST("/newTask", requireAuth(h.handlePostNewTask))
 	router.GET("/tasks/:id", requireAuth(h.handleGetTask))
-	router.GET("/tasks/:id/edit", requireAuth(h.handleGetEditTask))
-	router.POST("/tasks/:id/edit", requireAuth(h.handlePostEditTask))
+	router.POST("/tasks/:id", requireAuth(h.handlePostEditTask))
 	router.POST("/tasks/:id/delete", requireAuth(h.handleDeleteTask))
 
 	mux := http.NewServeMux()
 	mux.Handle("/", authService.Middleware(router))
-	mux.Handle("/assets/", cache(http.FileServer(http.FS(assetsFS))))
+	mux.Handle("/assets/", cache(http.FileServer(http.FS(assetsFS)), useTLS))
 
 	router.NotFound = http.HandlerFunc(handleNotFound)
 	router.PanicHandler = handleError
@@ -62,9 +61,11 @@ func NewHandler(authService *AuthService, userService *UserService, taskService 
 	return instrumentedHandler(mux)
 }
 
-func cache(handler http.Handler) http.HandlerFunc {
+func cache(handler http.Handler, cache bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Cache-Control", "max-age=300, public, must-revalidate, no-transform")
+		if cache {
+			w.Header().Add("Cache-Control", "max-age=300, public, must-revalidate, no-transform")
+		}
 		handler.ServeHTTP(w, r)
 	}
 }
@@ -97,16 +98,11 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request, p httprout
 		templates.IndexNoAuth().Render(r.Context(), w)
 		return
 	}
-	user, err := h.UserService.Get(r.Context())
-	if err != nil {
-		handleError(w, r, err)
-		return
-	}
-	templates.Index(user.UserName).Render(r.Context(), w)
+	http.Redirect(w, r, "/tasks", http.StatusSeeOther)
 }
 
 func (h *Handler) handleGetLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	templates.Login("", "", r.FormValue("next")).Render(r.Context(), w)
+	templates.AuthForm(true, "", "", r.FormValue("next")).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -122,7 +118,7 @@ func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p http
 	}
 	if !output.OK {
 		w.WriteHeader(http.StatusUnauthorized)
-		templates.Login("Invalid email and/or password", userName, r.FormValue("next")).Render(r.Context(), w)
+		templates.AuthForm(true, "Invalid email and/or password", userName, r.FormValue("next")).Render(r.Context(), w)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -141,15 +137,16 @@ func (h *Handler) handlePostLogin(w http.ResponseWriter, r *http.Request, p http
 }
 
 func (h *Handler) handleGetSignup(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	templates.Signup("", "").Render(r.Context(), w)
+	templates.AuthForm(false, "", "", r.FormValue("next")).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	userName := r.FormValue("userName")
 	password := r.FormValue("password")
+	next := r.FormValue("next")
 	if userName == "" || password == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		templates.Signup("Missing required values", userName).Render(r.Context(), w)
+		templates.AuthForm(false, "Missing required values", userName, next).Render(r.Context(), w)
 		return
 	}
 	output, err := h.AuthService.Signup(r.Context(), AuthInput{
@@ -162,7 +159,7 @@ func (h *Handler) handlePostSignup(w http.ResponseWriter, r *http.Request, p htt
 	}
 	if !output.OK {
 		w.WriteHeader(http.StatusUnauthorized)
-		templates.Signup("Username already claimed", userName).Render(r.Context(), w)
+		templates.AuthForm(false, "Username already claimed", userName, next).Render(r.Context(), w)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -197,22 +194,22 @@ func (h *Handler) handleTasks(w http.ResponseWriter, r *http.Request, p httprout
 		handleError(w, r, err)
 		return
 	}
-	templates.Tasks(tasks).Render(r.Context(), w)
+	templates.TaskList(tasks).Render(r.Context(), w)
 }
 
 func (h *Handler) handleGetNewTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	templates.TaskForm(model.Task{}).Render(r.Context(), w)
+	templates.Task(model.Task{}).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePostNewTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
-	id, err := h.TaskService.Create(r.Context(), title, description)
+	task, err := h.TaskService.Create(r.Context(), title, description)
 	if err != nil {
 		handleError(w, r, err)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/tasks/%d", id), http.StatusFound)
+	templates.TaskItem(task).Render(r.Context(), w)
 }
 
 func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -222,26 +219,11 @@ func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request, p httpro
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
 			templates.NotFound(true).Render(r.Context(), w)
-			return
 		}
 		handleError(w, r, err)
 		return
 	}
 	templates.Task(task).Render(r.Context(), w)
-}
-
-func (h *Handler) handleGetEditTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	id, _ := strconv.ParseInt(p.ByName("id"), 10, 64)
-	task, err := h.TaskService.Get(r.Context(), id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			templates.NotFound(true).Render(r.Context(), w)
-		}
-		handleError(w, r, err)
-		return
-	}
-	templates.TaskForm(task).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePostEditTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -262,7 +244,7 @@ func (h *Handler) handlePostEditTask(w http.ResponseWriter, r *http.Request, p h
 		handleError(w, r, err)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/tasks/%d", id), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/tasks"), http.StatusFound)
 }
 
 func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

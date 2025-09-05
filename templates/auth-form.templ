@@ -12,7 +12,7 @@ func authTitle(login bool) string {
 templ AuthForm(login bool, errorMsg, userName, next string) {
 	@Layout(authTitle(login), false) {
 		<div class="form-container login-container">
-			<form method="post" class="spaced">
+			<form method="post" class="spaced xlarge">
 				<input type="hidden" name="next" value={ next }/>
 				<h1>{ authTitle(login) }</h1>
 				<div>
@@ -31,7 +31,7 @@ templ AuthForm(login bool, errorMsg, userName, next string) {
 					<div class="alert p2">{ errorMsg }</div>
 				}
 				<button type="submit">{ authTitle(login) }</button>
-				<div class="form-footer">
+				<div class="auth-footer">
 					if login {
 						<span>Not already a member?</span>
 						<a href={ templ.URL(fmt.Sprintf("/signup?next=%s", next)) }>Sign up!</a>

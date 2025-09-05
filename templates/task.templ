@@ -8,7 +8,7 @@ import (
 templ Task(task model.Task) {
 	@Layout("Edit task", true) {
 		<div class="form-container">
-			<form id="task-form" method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="spaced">
+			<form id="task-form" method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="spaced xlarge">
 				<div class="header-row">
 					<div class="breadcrumb">
 						<a href="/tasks">back to tasks</a>
@@ -48,7 +48,7 @@ templ Task(task model.Task) {
 			</form>
 		</div>
 		<dialog id="delete-dialog">
-			<form method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d/delete", task.ID)) } class="spaced">
+			<form method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d/delete", task.ID)) } class="spaced large">
 				<h3>Delete task</h3>
 				<p>Are you sure you want to delete this task?</p>
 				<div class="form-buttons">

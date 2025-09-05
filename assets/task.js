@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteButton = document.getElementById("delete-button");
   const dialog = document.getElementById("delete-dialog");
   const taskForm = document.getElementById("task-form");
+  const descriptionTextarea = document.getElementById("description");
   let timeout;
 
   menuButton.addEventListener("click", (e) => {
@@ -52,4 +53,12 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error:", error);
     }
   });
+
+  const autoResize = () => {
+    descriptionTextarea.style.height = "auto";
+    descriptionTextarea.style.height =
+      Math.max(120, descriptionTextarea.scrollHeight) + "px";
+  };
+  descriptionTextarea.addEventListener("input", autoResize);
+  autoResize();
 });

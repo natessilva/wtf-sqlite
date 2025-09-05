@@ -171,7 +171,8 @@ textarea {
 
 textarea {
   min-height: 120px;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
 }
 
 input:focus,

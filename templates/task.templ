@@ -7,7 +7,7 @@ import (
 
 templ Task(task model.Task) {
 	@Layout("Edit task", true) {
-		<div class="form-container">
+		<div class="form-container scrollable-content">
 			<form id="task-form" method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="spaced xlarge">
 				<div class="header-row">
 					<div class="breadcrumb">
@@ -43,7 +43,7 @@ templ Task(task model.Task) {
 				</div>
 				<div>
 					<label for="description">Description</label>
-					<textarea name="description">{ task.Description }</textarea>
+					<textarea name="description" id="description">{ task.Description }</textarea>
 				</div>
 			</form>
 		</div>

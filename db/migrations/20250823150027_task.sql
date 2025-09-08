@@ -3,9 +3,11 @@ create table task(
     user_id integer not null references user(id),
     title text not null,
     description text not null,
+    ordinal real not null,
     is_completed boolean not null default 0,
     created_at datetime not null default current_timestamp,
     modified_at datetime not null default current_timestamp
 );
 
-create index task_user_id_idx on task(user_id);
+create index task_user_id_ordinal_idx on task(user_id, ordinal);
+create index task_user_id_id_idx on task(user_id, id);

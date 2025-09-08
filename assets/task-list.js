@@ -34,4 +34,6 @@ form.addEventListener("submit", async (e) => {
   form.reset();
   submitButton.disabled = false;
   submitButton.textContent = "Submit";
+
+  taskListContainer.scrollTop = taskListContainer.scrollHeight;
 });

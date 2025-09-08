@@ -6,7 +6,7 @@ import (
 )
 
 templ TaskItem(task model.Task) {
-	<a href={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="task-item">
+	<a href={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="task-item" data-id={ fmt.Sprint(task.ID) }>
 		{ task.Title }
 	</a>
 }

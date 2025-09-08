@@ -47,6 +47,7 @@ func NewHandler(authService *AuthService, userService *UserService, taskService 
 	router.GET("/tasks", requireAuth(h.handleTasks))
 	router.GET("/newTask", requireAuth(h.handleGetNewTask))
 	router.POST("/newTask", requireAuth(h.handlePostNewTask))
+	router.POST("/insertTaskBefore", requireAuth(h.handleInsertBeforeTask))
 	router.GET("/tasks/:id", requireAuth(h.handleGetTask))
 	router.POST("/tasks/:id", requireAuth(h.handlePostEditTask))
 	router.POST("/tasks/:id/delete", requireAuth(h.handleDeleteTask))
@@ -261,6 +262,25 @@ func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request, p htt
 		return
 	}
 	http.Redirect(w, r, "/tasks", http.StatusSeeOther)
+}
+
+func (h *Handler) handleInsertBeforeTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	idToInsert, _ := strconv.ParseInt(r.FormValue("idToInsert"), 10, 64)
+	target := r.FormValue("target")
+
+	if targetId, err := strconv.ParseInt(target, 10, 64); err == nil {
+		err := h.TaskService.InsertBefore(r.Context(), idToInsert, targetId)
+		if err != nil {
+			handleError(w, r, err)
+			return
+		}
+	} else {
+		err := h.TaskService.InsertAtEnd(r.Context(), idToInsert)
+		if err != nil {
+			handleError(w, r, err)
+			return
+		}
+	}
 }
 
 func handleError(w http.ResponseWriter, r *http.Request, err interface{}) {

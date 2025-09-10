@@ -10,7 +10,7 @@ templ TaskList(tasks []model.Task) {
 			</div>
 			<div class="scrollable-content">
 				for _, task := range tasks {
-					@TaskItem(task)
+					@TaskItem(task, false)
 				}
 			</div>
 		</div>

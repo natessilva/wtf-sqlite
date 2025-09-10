@@ -59,7 +59,7 @@ func NewHandler(authService *AuthService, userService *UserService, taskService 
 	router.NotFound = http.HandlerFunc(handleNotFound)
 	router.PanicHandler = handleError
 
-	return instrumentedHandler(mux)
+	return instrumentedHandler(gzipMiddleware(mux))
 }
 
 func cache(handler http.Handler, cache bool) http.HandlerFunc {
@@ -210,7 +210,7 @@ func (h *Handler) handlePostNewTask(w http.ResponseWriter, r *http.Request, p ht
 		handleError(w, r, err)
 		return
 	}
-	templates.TaskItem(task).Render(r.Context(), w)
+	templates.TaskItem(task, true).Render(r.Context(), w)
 }
 
 func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

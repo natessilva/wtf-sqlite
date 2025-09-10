@@ -24,16 +24,24 @@ function scrollAnimation() {
   }
 }
 
-container.addEventListener("dragstart", (event) => {
-  event.preventDefault();
-});
-
-container.addEventListener("click", (event) => {
-  if (preventClick) {
+container.addEventListener(
+  "dragstart",
+  (event) => {
     event.preventDefault();
-    preventClick = false;
-  }
-});
+  },
+  { passive: false }
+);
+
+container.addEventListener(
+  "click",
+  (event) => {
+    if (preventClick) {
+      event.preventDefault();
+      preventClick = false;
+    }
+  },
+  { passive: false }
+);
 
 container.addEventListener(
   "pointerdown",
@@ -48,18 +56,22 @@ container.addEventListener(
       startX = event.clientX;
       startY = event.clientY;
       startScrollTop = container.scrollTop;
-      container.setPointerCapture(event.pointerId);
       dragCopy.textContent = target.textContent;
 
-      dragPendingTimer = setTimeout(() => {
-        if (dragPending) {
-          dragPending = false;
-          dragging = true;
-          document.body.appendChild(dragCopy);
-          dragCopy.style.left = `${startX}px`;
-          dragCopy.style.top = `${startY - dragCopy.offsetHeight / 2}px`;
-        }
-      }, 250);
+      dragPendingTimer = setTimeout(
+        (pointerId) => {
+          if (dragPending) {
+            container.setPointerCapture(pointerId);
+            dragPending = false;
+            dragging = true;
+            document.body.appendChild(dragCopy);
+            dragCopy.style.left = `${startX}px`;
+            dragCopy.style.top = `${startY - dragCopy.offsetHeight / 2}px`;
+          }
+        },
+        250,
+        event.pointerId
+      );
     }
   },
   { passive: true }
@@ -126,7 +138,10 @@ container.addEventListener(
             target.classList.add("drag-over-bottom");
           }
         }
-      } else if (target === draggedEl && draggedOverEl != null) {
+      } else if (
+        (target === draggedEl || target == null) &&
+        draggedOverEl != null
+      ) {
         draggedOverEl.classList.remove("drag-over");
         draggedOverEl.classList.remove("drag-over-top");
         draggedOverEl.classList.remove("drag-over-bottom");

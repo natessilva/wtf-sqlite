@@ -102,7 +102,6 @@ func migrate(ctx context.Context, db *sql.DB) error {
 }
 
 func migrateFile(db *sql.DB, name string) error {
-	fmt.Printf("applying migration %s\n", name)
 	tx, err := db.Begin()
 	if err != nil {
 		return err

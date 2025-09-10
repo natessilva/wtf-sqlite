@@ -5,8 +5,8 @@ import (
 	"sqlite/model"
 )
 
-templ TaskItem(task model.Task) {
-	<a href={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="task-item" data-id={ fmt.Sprint(task.ID) }>
+templ TaskItem(task model.Task, isNew bool) {
+	<a href={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class={ "task-item", templ.KV("new", isNew) } data-id={ fmt.Sprint(task.ID) }>
 		{ task.Title }
 	</a>
 }

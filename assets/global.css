@@ -10,6 +10,7 @@
   /* Colors */
   --color-primary: #3b82f6;
   --color-primary-dark: #2563eb;
+  --color-new: rgba(59, 131, 246, 0.5);
   --color-text: #333;
   --color-text-secondary: #495057;
   --color-text-muted: #6c757d;
@@ -359,4 +360,19 @@ h1 {
 
 .task-item.drag-over.drag-over-bottom {
   border-bottom: 2px solid var(--color-primary);
+}
+
+/* New task indicator */
+.task-item.new {
+  animation: highlight-new 0.75s ease-in;
+  position: relative;
+}
+
+@keyframes highlight-new {
+  0% {
+    background-color: var(--color-new);
+  }
+  100% {
+    background-color: transparent;
+  }
 }

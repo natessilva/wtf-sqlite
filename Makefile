@@ -17,12 +17,12 @@ run: generate
 	@go run cmd/server/main.go
 
 test: generate
-	@go test ./...
+	@go test -v
 
 deploy: generate
 	@scripts/deploy.sh
 
 clean:
 	@rm -f .sqlc_generated .templ_generated
-	@rm -rf db/model
+	@rm -rf model
 	@rm -rf templates/*.go

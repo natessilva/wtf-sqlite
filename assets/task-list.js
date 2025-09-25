@@ -2,9 +2,7 @@ const dialog = document.getElementById("dialog");
 const form = dialog.querySelector("form");
 const submitButton = form.querySelector('button[type="submit"]');
 const addButton = document.getElementById("add-task");
-const taskListContainer = document.querySelector(
-  ".task-list .scrollable-content"
-);
+const taskListContainer = document.querySelector(".task-list");
 
 dialog.addEventListener("click", (event) => {
   if (event.target === dialog || event.target.classList.contains("cancel")) {

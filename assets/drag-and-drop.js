@@ -13,7 +13,7 @@ let scrollDirection = 0;
 let scrollFactor = 0;
 let preventClick = false;
 
-const container = document.querySelector(".task-list .scrollable-content");
+const container = document.querySelector(".task-list");
 const dragCopy = document.createElement("div");
 dragCopy.classList.add("drag-copy");
 

@@ -4,11 +4,11 @@ import "sqlite/model"
 
 templ TaskList(tasks []model.Task) {
 	@Layout("Tasks", true) {
-		<div class="task-list">
-			<div class="add-task-header">
-				<button id="add-task">+ Add Task</button>
-			</div>
-			<div class="scrollable-content">
+		<div class="scrollable-content">
+			<div class="task-list">
+				<div class="add-task-header">
+					<button id="add-task">+ Add Task</button>
+				</div>
 				for _, task := range tasks {
 					@TaskItem(task, false)
 				}

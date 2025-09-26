@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sqlite"
 	"sqlite/model"
@@ -29,7 +30,7 @@ func TestTaskService(t *testing.T) {
 	// set the logged in user
 	ctx = sqlite.ContextWithUser(ctx, model.User{ID: id})
 
-	tasks, err := svc.List(ctx)
+	tasks, err := svc.List(ctx, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -38,7 +39,7 @@ func TestTaskService(t *testing.T) {
 		t.Fatalf("expected zero tasks, got %d", len(tasks))
 	}
 
-	taskCreated, err := svc.Create(ctx, "test", "description")
+	taskCreated, err := svc.Create(ctx, "test", "description", sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -51,7 +52,7 @@ func TestTaskService(t *testing.T) {
 	if task.Title != "test" {
 		t.Fatalf("expected name test, got %s", task.Title)
 	}
-	tasks, err = svc.List(ctx)
+	tasks, err = svc.List(ctx, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -88,7 +89,7 @@ func TestTaskService(t *testing.T) {
 		t.Fatal(err)
 		return
 	}
-	tasks, err = svc.List(ctx)
+	tasks, err = svc.List(ctx, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -120,14 +121,14 @@ func TestTaskServiceReorderign(t *testing.T) {
 
 	// create 3 tasks
 	for i := 1; i <= 3; i++ {
-		_, err := svc.Create(ctx, fmt.Sprintf("task %d", i), fmt.Sprintf("description %d", i))
+		_, err := svc.Create(ctx, fmt.Sprintf("task %d", i), fmt.Sprintf("description %d", i), sql.NullInt64{})
 		if err != nil {
 			t.Fatal(err)
 			return
 		}
 	}
 
-	tasks, err := svc.List(ctx)
+	tasks, err := svc.List(ctx, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -141,12 +142,12 @@ func TestTaskServiceReorderign(t *testing.T) {
 		}
 	}
 
-	err = svc.InsertBefore(ctx, tasks[2].ID, tasks[0].ID)
+	err = svc.InsertBefore(ctx, tasks[2].ID, sql.NullInt64{Int64: tasks[0].ID, Valid: true}, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
 	}
-	newTasks, err := svc.List(ctx)
+	newTasks, err := svc.List(ctx, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -164,12 +165,12 @@ func TestTaskServiceReorderign(t *testing.T) {
 		t.Fatalf("expected third task to be ID %d, got %d", tasks[0].ID, newTasks[2].ID)
 	}
 
-	err = svc.InsertAtEnd(ctx, tasks[0].ID)
+	err = svc.InsertBefore(ctx, tasks[0].ID, sql.NullInt64{}, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return
 	}
-	newTasks, err = svc.List(ctx)
+	newTasks, err = svc.List(ctx, sql.NullInt64{})
 	if err != nil {
 		t.Fatal(err)
 		return

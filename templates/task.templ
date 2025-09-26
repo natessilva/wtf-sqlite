@@ -1,17 +1,22 @@
 package templates
 
 import (
+	"database/sql"
 	"fmt"
 	"sqlite/model"
 )
 
-templ Task(task model.Task) {
+templ Task(task model.Task, children []model.Task) {
 	@Layout("Edit task", true) {
-		<div class="form-container scrollable-content">
+		<div class="form-container">
 			<form id="task-form" method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d", task.ID)) } class="spaced xlarge">
 				<div class="header-row">
 					<div class="breadcrumb">
-						<a href="/tasks">back to tasks</a>
+						if task.ParentID.Valid {
+							<a href={ templ.URL(fmt.Sprintf("/tasks/%d", task.ParentID.Int64)) }>back to parent</a>
+						} else {
+							<a href="/tasks">back to tasks</a>
+						}
 					</div>
 					<div class="menu-container">
 						<button
@@ -47,6 +52,7 @@ templ Task(task model.Task) {
 				</div>
 			</form>
 		</div>
+		@TaskList(children, sql.NullInt64{Int64: task.ID, Valid: true})
 		<dialog id="delete-dialog">
 			<form method="post" action={ templ.URL(fmt.Sprintf("/tasks/%d/delete", task.ID)) } class="spaced large">
 				<h3>Delete task</h3>
@@ -58,5 +64,7 @@ templ Task(task model.Task) {
 			</form>
 		</dialog>
 		<script type="module" src="/assets/task.js"></script>
+		<script type="module" src="/assets/task-list.js"></script>
+		<script type="module" src="/assets/drag-and-drop.js"></script>
 	}
 }

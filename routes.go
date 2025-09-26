@@ -45,7 +45,6 @@ func NewHandler(authService *AuthService, userService *UserService, taskService 
 
 	// Unauthenticated users will be redirected to login from these routes
 	router.GET("/tasks", requireAuth(h.handleTasks))
-	router.GET("/newTask", requireAuth(h.handleGetNewTask))
 	router.POST("/newTask", requireAuth(h.handlePostNewTask))
 	router.POST("/insertTaskBefore", requireAuth(h.handleInsertBeforeTask))
 	router.GET("/tasks/:id", requireAuth(h.handleGetTask))
@@ -190,22 +189,24 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request, p httprou
 }
 
 func (h *Handler) handleTasks(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	tasks, err := h.TaskService.List(r.Context())
+	tasks, err := h.TaskService.List(r.Context(), sql.NullInt64{})
 	if err != nil {
 		handleError(w, r, err)
 		return
 	}
-	templates.TaskList(tasks).Render(r.Context(), w)
-}
-
-func (h *Handler) handleGetNewTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	templates.Task(model.Task{}).Render(r.Context(), w)
+	templates.TaskListPage(tasks, sql.NullInt64{}).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePostNewTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
-	task, err := h.TaskService.Create(r.Context(), title, description)
+	parent := r.FormValue("parentID")
+	var parentID sql.NullInt64
+	if parent != "" {
+		parentID.Int64, _ = strconv.ParseInt(parent, 10, 64)
+		parentID.Valid = true
+	}
+	task, err := h.TaskService.Create(r.Context(), title, description, parentID)
 	if err != nil {
 		handleError(w, r, err)
 		return
@@ -224,7 +225,8 @@ func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request, p httpro
 		handleError(w, r, err)
 		return
 	}
-	templates.Task(task).Render(r.Context(), w)
+	children, err := h.TaskService.List(r.Context(), sql.NullInt64{Int64: task.ID, Valid: true})
+	templates.Task(task, children).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePostEditTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -266,20 +268,23 @@ func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request, p htt
 
 func (h *Handler) handleInsertBeforeTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	idToInsert, _ := strconv.ParseInt(r.FormValue("idToInsert"), 10, 64)
-	target := r.FormValue("target")
+	targetStr := r.FormValue("target")
+	target := sql.NullInt64{}
+	if targetStr != "" {
+		target.Int64, _ = strconv.ParseInt(targetStr, 10, 64)
+		target.Valid = true
+	}
+	parent := r.FormValue("parentID")
+	parentID := sql.NullInt64{}
+	if parent != "" {
+		parentID.Int64, _ = strconv.ParseInt(parent, 10, 64)
+		parentID.Valid = true
+	}
 
-	if targetId, err := strconv.ParseInt(target, 10, 64); err == nil {
-		err := h.TaskService.InsertBefore(r.Context(), idToInsert, targetId)
-		if err != nil {
-			handleError(w, r, err)
-			return
-		}
-	} else {
-		err := h.TaskService.InsertAtEnd(r.Context(), idToInsert)
-		if err != nil {
-			handleError(w, r, err)
-			return
-		}
+	err := h.TaskService.InsertBefore(r.Context(), idToInsert, target, parentID)
+	if err != nil {
+		handleError(w, r, err)
+		return
 	}
 }
 
@@ -287,6 +292,11 @@ func handleError(w http.ResponseWriter, r *http.Request, err interface{}) {
 	ctx := r.Context()
 	w.WriteHeader(http.StatusInternalServerError)
 	templates.Error(UserFromContext(ctx).ID != 0).Render(ctx, w)
+	path := "unknown"
+	if rec, ok := w.(*instrumentedResponseWriter); ok {
+		path = rec.path
+	}
+	fmt.Printf("path:%s error: %v\n", path, err)
 }
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {

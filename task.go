@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sqlite/model"
 )
 
@@ -16,11 +17,21 @@ func NewTaskService(db *DB) *TaskService {
 	}
 }
 
-func (svc *TaskService) Create(ctx context.Context, title, description string) (model.Task, error) {
-	max, err := svc.db.Queries.GetMaxTaskOrdinal(ctx, UserFromContext(ctx).ID)
+func (svc *TaskService) Create(ctx context.Context, title, description string, parentID sql.NullInt64) (model.Task, error) {
+	var max float64
+	var err error
+	if parentID.Valid {
+		_, err = svc.Get(ctx, parentID.Int64)
+		if err != nil {
+			return model.Task{}, fmt.Errorf("parent task not found: %w", err)
+		}
+		max, err = svc.db.Queries.GetMaxTaskOrdinalByParent(ctx, parentID)
+	} else {
+		max, err = svc.db.Queries.GetMaxTaskOrdinal(ctx, UserFromContext(ctx).ID)
+	}
 	if err != nil {
 		if err != sql.ErrNoRows {
-			return model.Task{}, err
+			return model.Task{}, fmt.Errorf("error getting max ordinal: %w", err)
 		}
 		max = 0
 	}
@@ -29,10 +40,14 @@ func (svc *TaskService) Create(ctx context.Context, title, description string) (
 		Title:       title,
 		Description: description,
 		Ordinal:     max + 100,
+		ParentID:    parentID,
 	})
 }
 
-func (svc *TaskService) List(ctx context.Context) ([]model.Task, error) {
+func (svc *TaskService) List(ctx context.Context, parentID sql.NullInt64) ([]model.Task, error) {
+	if parentID.Valid {
+		return svc.db.Queries.ListTasksByParent(ctx, parentID)
+	}
 	return svc.db.Queries.ListTasks(ctx, UserFromContext(ctx).ID)
 }
 
@@ -46,7 +61,7 @@ func (svc *TaskService) Get(ctx context.Context, id int64) (model.Task, error) {
 func (svc *TaskService) Update(ctx context.Context, t model.Task) error {
 	_, err := svc.Get(ctx, t.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("task not found: %w", err)
 	}
 	return svc.db.Queries.UpdateTask(ctx, model.UpdateTaskParams{
 		ID:          t.ID,
@@ -59,27 +74,43 @@ func (svc *TaskService) Update(ctx context.Context, t model.Task) error {
 func (svc *TaskService) Delete(ctx context.Context, id int64) error {
 	_, err := svc.Get(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("task not found: %w", err)
 	}
 	return svc.db.Queries.DeleteTask(ctx, id)
 }
 
-func (svc *TaskService) InsertBefore(ctx context.Context, idToInsert, target int64) error {
+func (svc *TaskService) InsertBefore(ctx context.Context, idToInsert int64, target sql.NullInt64, parentID sql.NullInt64) error {
+	if !target.Valid {
+		return svc.insertAtEnd(ctx, idToInsert, parentID)
+	}
 	_, err := svc.Get(ctx, idToInsert)
 	if err != nil {
-		return err
+		return fmt.Errorf("task to insert not found: %w", err)
 	}
-	t, err := svc.Get(ctx, target)
+	t, err := svc.Get(ctx, target.Int64)
 	if err != nil {
-		return err
+		return fmt.Errorf("target task not found: %w", err)
 	}
-	previousOrdinal, err := svc.db.Queries.GetPreviousTaskOrdinal(ctx, model.GetPreviousTaskOrdinalParams{
-		UserID:  UserFromContext(ctx).ID,
-		Ordinal: t.Ordinal,
-	})
+	var previousOrdinal float64
+	if parentID.Valid {
+		_, err := svc.Get(ctx, parentID.Int64)
+		if err != nil {
+			return fmt.Errorf("parent task not found: %w", err)
+		}
+		previousOrdinal, err = svc.db.Queries.GetPreviousTaskOrdinalByParent(ctx, model.GetPreviousTaskOrdinalByParentParams{
+			ParentID: parentID,
+			Ordinal:  t.Ordinal,
+		})
+	} else {
+		previousOrdinal, err = svc.db.Queries.GetPreviousTaskOrdinal(ctx, model.GetPreviousTaskOrdinalParams{
+			UserID:  UserFromContext(ctx).ID,
+			Ordinal: t.Ordinal,
+		})
+
+	}
 	if err != nil {
 		if err != sql.ErrNoRows {
-			return err
+			return fmt.Errorf("error getting previous ordinal: %w", err)
 		}
 		previousOrdinal = t.Ordinal - 100
 	}
@@ -90,14 +121,23 @@ func (svc *TaskService) InsertBefore(ctx context.Context, idToInsert, target int
 	})
 }
 
-func (svc *TaskService) InsertAtEnd(ctx context.Context, idToInsert int64) error {
+func (svc *TaskService) insertAtEnd(ctx context.Context, idToInsert int64, parentID sql.NullInt64) error {
 	_, err := svc.Get(ctx, idToInsert)
 	if err != nil {
-		return err
+		return fmt.Errorf("task to insert not found: %w", err)
 	}
-	maxOrdinal, err := svc.db.Queries.GetMaxTaskOrdinal(ctx, UserFromContext(ctx).ID)
+	var maxOrdinal float64
+	if parentID.Valid {
+		_, err := svc.Get(ctx, parentID.Int64)
+		if err != nil {
+			return fmt.Errorf("parent task not found: %w", err)
+		}
+		maxOrdinal, err = svc.db.Queries.GetMaxTaskOrdinalByParent(ctx, parentID)
+	} else {
+		maxOrdinal, err = svc.db.Queries.GetMaxTaskOrdinal(ctx, UserFromContext(ctx).ID)
+	}
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting max ordinal: %w", err)
 	}
 	return svc.db.Queries.SetTaskOrdinal(ctx, model.SetTaskOrdinalParams{
 		Ordinal: maxOrdinal + 100,

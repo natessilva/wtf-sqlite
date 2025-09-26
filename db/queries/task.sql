@@ -1,8 +1,11 @@
 -- name: CreateTask :one
-insert into task(user_id, title, description, ordinal) values(?,?,?,?) returning *;
+insert into task(user_id, parent_id, title, description, ordinal) values(?,?,?,?,?) returning *;
 
 -- name: ListTasks :many
-select * from task where user_id = ? order by ordinal;
+select * from task where parent_id is null and user_id = ? order by ordinal;
+
+-- name: ListTasksByParent :many
+select * from task where parent_id = ? order by ordinal;
 
 -- name: GetTask :one
 select * from task where user_id = ? and id = ?;
@@ -18,6 +21,12 @@ select ordinal from task where user_id = ? order by ordinal desc limit 1;
 
 -- name: GetPreviousTaskOrdinal :one
 select ordinal from task where user_id = ? and ordinal < ? order by ordinal desc limit 1;
+
+-- name: GetMaxTaskOrdinalByParent :one
+select ordinal from task where parent_id = ? order by ordinal desc limit 1;
+
+-- name: GetPreviousTaskOrdinalByParent :one
+select ordinal from task where parent_id = ? and ordinal < ? order by ordinal desc limit 1;
 
 -- name: SetTaskOrdinal :exec
 update task set ordinal = ? where id = ?;

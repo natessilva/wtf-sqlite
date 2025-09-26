@@ -1,0 +1,12 @@
+package templates
+
+import "sqlite/model"
+import "database/sql"
+
+templ TaskListPage(tasks []model.Task, parentID sql.NullInt64) {
+	@Layout("Tasks", true) {
+		@TaskList(tasks, parentID)
+		<script type="module" src="/assets/task-list.js"></script>
+		<script type="module" src="/assets/drag-and-drop.js"></script>
+	}
+}

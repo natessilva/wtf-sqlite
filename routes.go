@@ -247,7 +247,7 @@ func (h *Handler) handlePostEditTask(w http.ResponseWriter, r *http.Request, p h
 		handleError(w, r, err)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/tasks"), http.StatusFound)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"sqlite/model"
 	"time"
 )
 
@@ -49,15 +50,21 @@ func (svc *SessionCleanupService) cleanupExpiredSessions() {
 // runCleanup deletes expired sessions in batches until none remain
 func (svc *SessionCleanupService) runCleanup() error {
 	ctx := context.Background()
+	var count int64
 	for {
-		err := svc.db.Queries.DeleteExpiredSessions(ctx)
+		err := svc.db.Transaction(ctx, func(ctx context.Context, q *model.Queries) error {
+			err := q.DeleteExpiredSessions(ctx)
+			if err != nil {
+				return fmt.Errorf("error deleting expired sessions: %w", err)
+			}
+			count, err = q.DeletedExpiredSessionsCount(ctx)
+			if err != nil {
+				return fmt.Errorf("error counting deleted expired sessions: %w", err)
+			}
+			return nil
+		})
 		if err != nil {
-			return fmt.Errorf("error deleting expired sessions: %w", err)
-		}
-
-		count, err := svc.db.Queries.DeletedExpiredSessionsCount(ctx)
-		if err != nil {
-			return fmt.Errorf("error counting deleted expired sessions: %w", err)
+			return err
 		}
 
 		// If no sessions were deleted, we're done
